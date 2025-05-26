@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.111
+// @version        0.1.112
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -2339,6 +2339,31 @@ function parseDate(string) {
     return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
 }
 
+function buildQuoteEvent(messageId) {
+    const message = document.querySelector(`.jvchat-message[jvchat-id='${messageId}']`);
+    const quoteButton = message.querySelector('.jvchat-quote');
+    const ajaxHash = document.querySelector('input#ajax_hash_liste_messages').value;
+    const author = message.querySelector('.jvchat-author').textContent.trim();
+    const date = message.querySelector('.jvchat-date').getAttribute('to-quote');
+    quoteButton.addEventListener('click', async () => {
+        const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${ajaxHash}`;
+        const response = await fetch(url);
+        const result = await response.json();
+
+        let content = `\n> Le ${date} ${author} a écrit: \n> `;
+        content += result.txt.split('\n').join('\n> ');
+        content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
+        content += '\n\n';
+
+        let textarea = document.getElementById("message_topic");
+        if (isReduced) {
+            toggleTextarea();
+        }
+        insertAtCursor(textarea, content);
+        textarea.focus();
+    });
+}
+
 function addMessages(messages, editing, requestTimestamp) {
     let main = document.getElementById("jvchat-main");
     let hasNewMessages = false;
@@ -2452,6 +2477,7 @@ function addMessages(messages, editing, requestTimestamp) {
             }
         }
         for (let newMessageId of newMessagesIds) {
+            buildQuoteEvent(newMessageId);
             let event = new CustomEvent('jvchat:newmessage', { 'detail': { id: newMessageId, isEdit: false } });
             dispatchEvent(event);
         }
