@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.113
+// @version        0.1.114
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -263,6 +263,10 @@ label {
     resize: none;
     min-width: unset;
     max-height: 5rem;
+}
+
+.messageEditor__containerPreview {
+    display: none;
 }
 
 .jvchat-edition-textarea {
@@ -1835,6 +1839,13 @@ function getTextArea() {
     return document.getElementById("message_topic");
 }
 
+function setTextAreaValue(textarea, value) {
+    const prototype = Object.getPrototypeOf(textarea);
+    const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
+    nativeSetter.call(textarea, value);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function handleApiResponseError(response, raiseException = true) {
     if (response.errors) {
         let error = Object.entries(response.errors)[0];
@@ -1936,7 +1947,8 @@ async function postMessage() {
 
         setTimeout(tryCatch(forceUpdate), 1000);
 
-        textarea.value = "";
+        setTextAreaValue(textarea, '');
+
         setTextareaHeight();
         setScrollDown();
         postingMessage = false;
