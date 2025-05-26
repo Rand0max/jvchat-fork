@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name           JVChat Premium FORK by Rand0max
 // @description    Outil de discussion instantanée pour les forums de Jeuxvideo.com
-// @author         Blaff
+// @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.109
+// @version        0.1.110
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -1167,6 +1167,7 @@ let PANEL = `
 let freshHash = undefined;
 let freshDeletionHash = undefined;
 let freshForm = undefined;
+let freshPayload = undefined;
 let firstMessageId = undefined;
 let firstMessageDate = undefined;
 let lastEditionTime = {};  // id => [timestamp, edition, deleted]
@@ -1253,7 +1254,7 @@ function escape(str, isAttribute) {
 }
 
 function getForm(doc) {
-    return doc.getElementsByClassName('form-post-message')[0];
+    return doc.querySelector('#forums-post-message-editor > form');
 }
 
 function getHash(doc) {
@@ -1348,10 +1349,10 @@ function toggleTextarea() {
     saveConfig();
 
     let isDown = isScrollDown();
-    document.getElementById("bloc-formulaire-forum").getElementsByClassName("jv-editor-toolbar")[0]?.classList.toggle("jvchat-hide");
-    document.getElementById("jvchat-enlarge").classList.toggle("jvchat-hide");
-    document.getElementById("jvchat-reduce").classList.toggle("jvchat-hide");
-    document.getElementById("jvchat-post").classList.toggle("jvchat-hide");
+    document.getElementById("bloc-formulaire-forum").getElementsByClassName("messageEditor__buttonEdit")[0]?.classList.toggle("jvchat-hide");
+    document.getElementById("jvchat-enlarge")?.classList.toggle("jvchat-hide");
+    document.getElementById("jvchat-reduce")?.classList.toggle("jvchat-hide");
+    document.getElementById("jvchat-post")?.classList.toggle("jvchat-hide");
     document.getElementById("bloc-formulaire-forum").classList.toggle("jvchat-reduced");
 
     setTextareaHeight();
@@ -1546,6 +1547,14 @@ function improveImages(elem) {
     }
 }
 
+function replacePostButton(clickEvent) {
+    const oldElement = document.querySelector('.postMessage');
+    const newElement = oldElement.cloneNode(true);
+    oldElement.parentNode.replaceChild(newElement, oldElement);
+    newElement.onclick = clickEvent;
+    newElement.type = "button";
+}
+
 function clearPage(document) {
     let buttons = `
         <div id="jvchat-buttons-main" class='jvchat-buttons'>
@@ -1565,11 +1574,8 @@ function clearPage(document) {
     if (messageTopic) {
         messageTopic.classList.add("jvchat-textarea");
         messageTopic.setAttribute("placeholder", "Hop hop hop, le message ne va pas s'écrire tout seul !");
-        messageTopic.insertAdjacentHTML("afterend", buttons);
         messageTopic.addEventListener("keydown", tryCatch(postMessageIfEnter));
-        document.getElementById("jvchat-post").addEventListener("click", tryCatch(postMessage));
-        document.getElementById("jvchat-enlarge").addEventListener("click", tryCatch(toggleTextarea));
-        document.getElementById("jvchat-reduce").addEventListener("click", tryCatch(toggleTextarea));
+        replacePostButton(tryCatch(postMessage));
     }
     document.getElementsByClassName("conteneur-messages-pagi")[0].insertAdjacentHTML("afterbegin", "<div id='jvchat-main'><hr class='jvchat-ruler'></div>");
     document.getElementById("forum-main-col").insertAdjacentHTML("afterbegin", "<div id='jvchat-alerts'><div id='jvchat-fixed-alert' class='jvchat-hide'><div class='alert-row'></div></div><div id='jvchat-turbo-warning' class='jvchat-hide'><button class='close jvchat-alert-hide' aria-hidden='true' data-dismiss='alert' type='button'>×</button><div class='alert-row'></div></div><div id='jvchat-degraded-refresh-warning' class='jvchat-hide'><div class='alert-row'></div></div></div>");
@@ -1796,6 +1802,8 @@ function closeAlert(event) {
     }
 }
 
+
+
 function getMessageIdFromUrl(messageUrl) {
     const urlObj = new URL(messageUrl);
     if (!urlObj?.hash?.length) return;
@@ -1803,26 +1811,120 @@ function getMessageIdFromUrl(messageUrl) {
     return match?.groups?.messageid;
 }
 
-function postMessage() {
-    if (freshForm === undefined) {
+function getTopicId() {
+    const blocFormulaireElem = document.querySelector('#bloc-formulaire-forum');
+    if (!blocFormulaireElem) return undefined;
+    return blocFormulaireElem.getAttribute('data-topic-id');
+}
+
+function getForumId() {
+    const forumRegex = /^\/forums\/(?:0|1|42)-(?<forumid>[0-9]+)-[0-9]+-[0-9]+-0-[0-9]+-0-.*\.htm$/i;
+    const currentUrl = window.location.pathname;
+    const matches = forumRegex.exec(currentUrl);
+    if (!matches) return null;
+    const forumId = parseInt(matches.groups.forumid.trim());
+    return forumId;
+}
+
+function getForumPayload() {
+    return JSON.parse(atob(window.jvc.forumsAppPayload));
+}
+
+function getTextArea() {
+    return document.getElementById("message_topic");
+}
+
+function handleApiResponseError(response, raiseException = true) {
+    if (response.errors) {
+        let error = Object.entries(res.errors)[0];
+        if (raiseException) throw new Error(`Erreur API JVC : "${error[1]}"`);
+        else addAlertbox("danger", error);
+        return true;
+    }
+    return false;
+}
+
+async function postMessage() {
+    if (!freshForm) {
         addAlertbox("danger", "Impossible de poster le message, aucun formulaire trouvé");
         return;
     }
 
-    let textarea = document.getElementById("message_topic");
-
-    let formData = serializeForm(freshForm);
-    formData["message_topic"] = textarea.value;
+    let textarea = getTextArea();
     let formulaire = document.getElementById("bloc-formulaire-forum");
 
     formulaire.classList.add("jvchat-disabled-form");
     textarea.setAttribute("disabled", "true");
 
-    let timestamp = getTimestamp();
+    let formData = serializeForm(freshForm);
 
-    function onSuccess(res, responseURL) {
-        const messageId = getMessageIdFromUrl(responseURL);
-        if (messageId?.length) {
+    formData.set("text", textarea.value);
+    formData.set("topicId", getTopicId());
+    formData.set("forumId", getForumId());
+    formData.set("group", "1");
+    formData.set("messageId", "undefined");
+
+    const forumPayload = freshPayload || getForumPayload();
+    const formSessionData = forumPayload.formSession;
+
+    for (const key in formSessionData) {
+        if (Object.hasOwnProperty.call(formSessionData, key)) {
+            formData.append(key, formSessionData[key]);
+        }
+    }
+
+    let fs_custom_input = Array.from(freshForm.elements).find(e => /^fs_[a-f0-9]{40}$/i.test(e.name));
+    if (fs_custom_input && !formData.has(fs_custom_input.name)) {
+        formData.set(fs_custom_input.name, fs_custom_input.value);
+    }
+    if (!formData.has("ajax_hash")) {
+        let ajax_hash = freshForm.querySelector('input[name="ajax_hash"]')?.value || freshHash;
+        formData.set("ajax_hash", ajax_hash);
+    }
+
+    const boundary = "----geckoformboundary" + Math.random().toString(16).slice(2);
+    let body = "";
+    for (let [key, value] of formData.entries()) {
+        body += `--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`;
+    }
+    body += `--${boundary}--\r\n`;
+
+    let timeout = turboActivated ? 5000 : 20000;
+    postingMessage = true;
+
+    try {
+        const response = await Promise.race([
+            fetch("https://www.jeuxvideo.com/forums/message/add", {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Accept": "application/json",
+                    "Accept-Language": "fr",
+                    "x-requested-with": "XMLHttpRequest",
+                    "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                    "Pragma": "no-cache",
+                    "Cache-Control": "no-cache"
+                },
+                referrer: document.URL,
+                body: body,
+                mode: "cors"
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), timeout))
+        ]);
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP ${response.status}`);
+        }
+
+        const res = await response.json();
+
+        handleApiResponseError(res);
+
+        let messageId = res?.messageId || res?.id || null;
+        if (!messageId && response.url) {
+            messageId = getMessageIdFromUrl(response.url);
+        }
+        if (messageId) {
             const detail = { 'detail': { id: messageId, content: textarea.value, username: currentUser.author } };
             const event = new CustomEvent('jvchat:postmessage', detail);
             dispatchEvent(event);
@@ -1830,45 +1932,23 @@ function postMessage() {
 
         formulaire.classList.remove("jvchat-disabled-form");
         textarea.removeAttribute("disabled");
-        let parsedPage = parsePage(res, timestamp);
-        if (!parsedPage.alert) {
-            textarea.value = "";
-        }
+
+        setTimeout(tryCatch(forceUpdate), 1000);
+
+        textarea.value = "";
         setTextareaHeight();
         setScrollDown();
         postingMessage = false;
 
-        if (parsedPage.nbMessagesPage === 20) {
-            // Bug si on poste un message générant une nouvelle page : la requête retourne la page
-            // courante, donc notre nouveau message n'apparaît pas, il faut forcer un refetch()
-            // MAIS il faut attendre un peu, car JVC galère à créer la page...
-            setTimeout(tryCatch(forceUpdate), 3000);
-        }
-    }
-
-    function onError(err, _) {
-        addAlertbox("danger", err);
+    } catch (err) {
+        addAlertbox("danger", err.message || err);
         formulaire.classList.remove("jvchat-disabled-form");
         textarea.removeAttribute("disabled");
         postingMessage = false;
     }
-
-    function onTimeout(err) {
-        addAlertbox("warning", err);
-        formulaire.classList.remove("jvchat-disabled-form");
-        textarea.removeAttribute("disabled");
-        postingMessage = false;
-    }
-
-
-    let timeout = 20000;
-    if (turboActivated) {
-        timeout = 5000;
-    }
-
-    postingMessage = true;
-    request("POST", document.URL, onSuccess, onError, onTimeout, makeFormData(formData), false, timeout, false);
 }
+
+
 
 function editMessage(bloc) {
     let textarea = bloc.getElementsByClassName("jvchat-edition-textarea")[0];
@@ -1899,10 +1979,7 @@ function editMessage(bloc) {
         }
 
         textarea.removeAttribute("disabled");
-        if (res.erreur.length > 0) {
-            for (let err of res.erreur) {
-                addAlertbox("danger", err);
-            }
+        if (handleApiResponseError(res, false)) {
             return;
         }
         let dom = document.createElement("html");
@@ -1938,10 +2015,7 @@ function requestEdit(bloc) {
 
     function onSuccess(res) {
         contentClasses.remove("disabled-content");
-        if (res.erreur.length > 0) {
-            for (let err of res.erreur) {
-                addAlertbox("danger", err);
-            }
+        if (handleApiResponseError(res, false)) {
             return;
         }
         let dom = document.createElement("html");
@@ -2077,22 +2151,7 @@ function postMessageIfEnter(event) {
 }
 
 function serializeForm(form) {
-    // Useless actually, just use new FormData(form)
-    let dict = {};
-
-    for (let select of form.getElementsByTagName("select")) {
-        dict[select.name] = select.querySelector("option[selected]").value;
-    }
-
-    for (let input of form.getElementsByTagName("input")) {
-        dict[input.name] = input.value;
-    }
-
-    for (let textarea of form.getElementsByTagName("textarea")) {
-        dict[textarea.name] = textarea.value;
-    }
-
-    return dict;
+    return new FormData(form);
 }
 
 function makeFormData(dict) {
@@ -2598,6 +2657,7 @@ function triggerJVChat() {
     freshHash = getHash(document);
     freshDeletionHash = getDeletionHash(document);
     freshForm = getForm(document);
+    freshPayload = getPayload(document);
 
     favicon = makeFavicon();
 
@@ -2856,6 +2916,43 @@ function decreaseUpdateInterval() {
     updateIntervalIdx = transisitions[updateIntervalIdx];
 }
 
+function getPayload(doc) {
+    const scripts = doc.getElementsByTagName('script');
+    let rawPayloadString = null;
+
+    for (let i = 0; i < scripts.length; i++) {
+        const scriptContent = scripts[i].textContent || scripts[i].innerText; // textContent est préférable
+
+        if (scriptContent) {
+            const match = scriptContent.match(/window\.jvc\.forumsAppPayload\s*=\s*['"]([^'"]+)['"]/);
+            if (match && match[1]) {
+                rawPayloadString = match[1];
+                break;
+            }
+
+            const jvcVarMatch = scriptContent.match(/jvc\.forumsAppPayload\s*=\s*['"]([^'"]+)['"]/);
+            if (!rawPayloadString && jvcVarMatch && jvcVarMatch[1]) {
+                rawPayloadString = jvcVarMatch[1];
+                break;
+            }
+        }
+    }
+
+    if (rawPayloadString) {
+        try {
+            const decodedPayload = JSON.parse(atob(rawPayloadString));
+            return decodedPayload;
+        } catch (e) {
+            console.error("Erreur lors du décodage Base64 ou du parsing JSON du payload:", e);
+            console.error("Payload brut extrait", rawPayloadString); // Pour le débogage
+            return null;
+        }
+    } else {
+        console.warn("La variable window.jvc.forumsAppPayload n'a pas été trouvée dans les balises <script> du DOM fourni.");
+        return null;
+    }
+}
+
 function parsePage(res, requestTimestamp) {
     let error = getTopicError(res);
     if (error !== undefined) {
@@ -2876,7 +2973,7 @@ function parsePage(res, requestTimestamp) {
     }
 
     let form = getForm(res);
-    if (form !== undefined) {
+    if (form) {
         freshForm = form;
     }
 
@@ -2888,6 +2985,11 @@ function parsePage(res, requestTimestamp) {
     let deletionHash = getDeletionHash(res);
     if (deletionHash !== undefined) {
         freshDeletionHash = deletionHash;
+    }
+
+    let payload = getPayload(res);
+    if (payload !== undefined) {
+        freshPayload = payload;
     }
 
     let messages = getMessages(res);
