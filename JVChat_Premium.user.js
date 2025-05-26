@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.110
+// @version        0.1.111
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -1836,7 +1836,7 @@ function getTextArea() {
 
 function handleApiResponseError(response, raiseException = true) {
     if (response.errors) {
-        let error = Object.entries(res.errors)[0];
+        let error = Object.entries(response.errors)[0];
         if (raiseException) throw new Error(`Erreur API JVC : "${error[1]}"`);
         else addAlertbox("danger", error);
         return true;
