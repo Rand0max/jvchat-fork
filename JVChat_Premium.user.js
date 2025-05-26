@@ -10,8 +10,8 @@
 // @match          http://*.jeuxvideo.com/forums/1-*
 // @match          https://*.jeuxvideo.com/forums/1-*
 // @grant          none
-// @downloadURL https://update.greasyfork.org/scripts/369381/JVChat%20Premium.user.js
-// @updateURL https://update.greasyfork.org/scripts/369381/JVChat%20Premium.meta.js
+// @downloadURL https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
+// @updateURL https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
 // ==/UserScript==
 
 
