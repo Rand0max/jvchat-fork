@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name           JVChat Premium
+// @name           JVChat Premium FORK by Rand0max
 // @description    Outil de discussion instantanée pour les forums de Jeuxvideo.com
 // @author         Blaff
 // @namespace      JVChatPremium
