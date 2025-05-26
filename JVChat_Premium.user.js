@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.112
+// @version        0.1.113
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -262,6 +262,7 @@ label {
 #message_topic {
     resize: none;
     min-width: unset;
+    max-height: 5rem;
 }
 
 .jvchat-edition-textarea {
@@ -1349,7 +1350,7 @@ function toggleTextarea() {
     saveConfig();
 
     let isDown = isScrollDown();
-    document.getElementById("bloc-formulaire-forum").getElementsByClassName("messageEditor__buttonEdit")[0]?.classList.toggle("jvchat-hide");
+    //document.getElementById("bloc-formulaire-forum").getElementsByClassName("messageEditor__buttonEdit")[0]?.classList.toggle("jvchat-hide");
     document.getElementById("jvchat-enlarge")?.classList.toggle("jvchat-hide");
     document.getElementById("jvchat-reduce")?.classList.toggle("jvchat-hide");
     document.getElementById("jvchat-post")?.classList.toggle("jvchat-hide");
@@ -2350,7 +2351,7 @@ function buildQuoteEvent(messageId) {
         const response = await fetch(url);
         const result = await response.json();
 
-        let content = `\n> Le ${date} ${author} a écrit: \n> `;
+        let content = `\n> Le ${date} ${author} a écrit :\n> `;
         content += result.txt.split('\n').join('\n> ');
         content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
         content += '\n\n';
@@ -2660,6 +2661,20 @@ function setTopicNbMessages(document, nbMessages) {
     }
 }
 
+function hideCloudfareInfo() {
+    function hideElement(el) {
+        if (el) el.classList.add("jvchat-hide");
+    }
+    const observer = new MutationObserver(() => {
+        let cfInfo = document.querySelector(".js-captcha-logo");
+        if (cfInfo) hideElement(cfInfo.parentElement);
+    });
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
+
 function triggerJVChat() {
     // TamperMonkey / Chrome bug: https://github.com/Tampermonkey/tampermonkey/issues/705#issuecomment-493895776
     if (window) {
@@ -2684,6 +2699,8 @@ function triggerJVChat() {
     freshDeletionHash = getDeletionHash(document);
     freshForm = getForm(document);
     freshPayload = getPayload(document);
+
+    hideCloudfareInfo();
 
     favicon = makeFavicon();
 
