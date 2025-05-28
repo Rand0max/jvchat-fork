@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.115
+// @version        0.1.116
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -3502,7 +3502,8 @@ function insertAtCursor(input, textToInsert) {
     const value = input.value;
     const start = input.selectionStart;
     const end = input.selectionEnd;
-    setTextAreaValue(input, value.slice(0, start) + textToInsert + value.slice(end));
+    const newValue = value.slice(0, start) + textToInsert + value.slice(end);
+    setTextAreaValue(input, newValue);
     input.selectionStart = input.selectionEnd = start + textToInsert.length;
 }
 
@@ -3532,6 +3533,7 @@ function dontScrollOnExpand(event) {
             setScrollDown();
         }
     } else if (classes.contains("jvchat-quote")) {
+        /*
         let bloc = target.closest(".jvchat-message");
         let quote = reverseQuote(bloc);
         let textarea = document.getElementById("message_topic");
@@ -3540,6 +3542,7 @@ function dontScrollOnExpand(event) {
         }
         insertAtCursor(textarea, quote);
         textarea.focus();
+        */
     } else if (classes.contains("jvchat-edit")) {
         let bloc = target.closest(".jvchat-message");
         requestEdit(bloc);
