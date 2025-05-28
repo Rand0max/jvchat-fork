@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.116
+// @version        0.1.117
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -138,6 +138,59 @@ body,
 body {
     overflow-y: unset;
 }
+
+
+/* Edition */
+.jvchat-edition {
+    display: flex;
+    flex-direction: column; 
+    gap: 5px;
+}
+
+.jvchat-edition-textarea {
+    resize: vertical; 
+    width: 100%;
+    min-height: 60px; 
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+.jvchat-night-mode .jvchat-edition-textarea { 
+    background-color: #484c52;
+    color: #dcddde;
+    border-color: #2d2d2d;
+}
+
+.jvchat-edition-buttons {
+    display: flex;
+    gap: 10px; 
+}
+
+.jvchat-edition-buttons button {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.jvchat-edition-buttons .jvchat-edition-submit {
+    background-color: #4CAF50; 
+    color: white;
+}
+.jvchat-edition-buttons .jvchat-edition-cancel-btn {
+    background-color: #f44336; 
+    color: white;
+}
+.jvchat-night-mode .jvchat-edition-buttons button {
+    border-color: #2d2d2d;
+}
+.jvchat-night-mode .jvchat-edition-buttons .jvchat-edition-submit {
+    background-color: #5cb85c;
+}
+.jvchat-night-mode .jvchat-edition-buttons .jvchat-edition-cancel-btn {
+    background-color: #d9534f;
+}
+
 
 .jvchat-disabled-form {
     opacity: 0.5;
@@ -1319,6 +1372,31 @@ function getDeletionHash(doc) {
     return hash.getAttribute("value");
 }
 
+function getJvcHash(type = "liste_messages") {
+    if (type === "liste_messages" && typeof freshHash !== 'undefined') {
+        return freshHash;
+    }
+    if (type === "moderation_forum" && typeof freshDeletionHash !== 'undefined') {
+        return freshDeletionHash;
+    }
+    const hashElement = document.querySelector(`#ajax_hash_${type}`);
+    return hashElement ? hashElement.value : undefined;
+}
+
+function makeFormDataFromObject(dict) {
+    const formData = new FormData();
+    for (const key in dict) {
+        if (Object.hasOwnProperty.call(dict, key)) {
+            if (Array.isArray(dict[key])) {
+                dict[key].forEach(item => formData.append(key, item));
+            } else {
+                formData.append(key, dict[key]);
+            }
+        }
+    }
+    return formData;
+}
+
 
 function getTopicLocked(elem) {
     let lock = elem.getElementsByClassName("message-lock-topic")[0];
@@ -1849,7 +1927,6 @@ function closeAlert(event) {
 }
 
 
-
 function getMessageIdFromUrl(messageUrl) {
     const urlObj = new URL(messageUrl);
     if (!urlObj?.hash?.length) return;
@@ -1887,15 +1964,30 @@ function setTextAreaValue(textarea, value) {
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function handleApiResponseError(response, raiseException = true) {
-    if (response.errors) {
-        let error = Object.entries(response.errors)[0];
-        if (raiseException) throw new Error(`Erreur API JVC : "${error[1]}"`);
-        else addAlertbox("danger", error);
+function displayError(message) {
+    console.error("JVChat error : ", message);
+    if (typeof addAlertbox === 'function') {
+        addAlertbox("danger", message);
+    } else {
+        alert(`JVChat error : ${message}`);
+    }
+}
+
+function handleApiResponseError(response, operation = "[N/A]") {
+    let errorMessage = null;
+    if (response && Array.isArray(response.erreur) && response.erreur.length > 0) {
+        errorMessage = response.erreur.join(', ');
+    } else if (response && response.errors && (Array.isArray(response.errors) ? response.errors.length > 0 : Object.keys(response.errors).length > 0)) {
+        errorMessage = Array.isArray(response.errors) ? response.errors.join(', ') : Object.values(response.errors).join(', ');
+    }
+
+    if (errorMessage) {
+        displayError(`Erreur lors de ${operation} : ${errorMessage}`);
         return true;
     }
     return false;
 }
+
 
 async function postMessage() {
     if (!freshForm) {
@@ -2002,6 +2094,162 @@ async function postMessage() {
     }
 }
 
+async function requestMessageDataForEdit(messageId, messageBloc) {
+    const ajaxHash = getJvcHash("liste_messages");
+    if (!ajaxHash) {
+        displayError("Hash AJAX (liste_messages) introuvable pour l'édition.");
+        return;
+    }
+
+    const url = `https://www.jeuxvideo.com/forums/ajax_edit_message.php?id_message=${messageId}&ajax_hash=${ajaxHash}&action=get`;
+    const originalContentDiv = messageBloc.querySelector(".jvchat-content");
+    const editContainerDiv = messageBloc.querySelector(".jvchat-edition");
+
+    originalContentDiv.classList.add("jvchat-hide");
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+        const data = await response.json();
+
+        if (handleApiResponseError(data, "récupération des données d'édition")) {
+            originalContentDiv.classList.remove("jvchat-hide");
+            return;
+        }
+
+        if (!messageBloc.originalHTML) {
+            messageBloc.originalHTML = originalContentDiv.innerHTML;
+        }
+
+        renderEditInterface(messageBloc, messageId, data.jvcode, data.edit_form_session, ajaxHash);
+
+    } catch (error) {
+        displayError(`Fetch error : ${error.message}`);
+        originalContentDiv.classList.remove("jvchat-hide");
+    }
+}
+
+function renderEditInterface(messageBloc, messageId, jvcode, formSession, ajaxHashPourPost) {
+    const originalContentDiv = messageBloc.querySelector(".jvchat-content");
+    const editionDiv = messageBloc.querySelector(".jvchat-edition");
+
+    editionDiv.innerHTML = '';
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "jvchat-edition-textarea";
+    textarea.value = jvcode;
+
+    const buttonsDiv = document.createElement("div");
+    buttonsDiv.className = "jvchat-edition-buttons";
+
+    const submitButton = document.createElement("button");
+    submitButton.type = "button";
+    submitButton.textContent = "Valider";
+    submitButton.className = "jvchat-edition-submit";
+    submitButton.onclick = () => submitEditedMessage(messageBloc, messageId, textarea.value, formSession, ajaxHashPourPost);
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.textContent = "Annuler";
+    cancelButton.className = "jvchat-edition-cancel-btn";
+    cancelButton.onclick = () => {
+        editionDiv.classList.add("jvchat-hide");
+        editionDiv.innerHTML = '';
+        originalContentDiv.classList.remove("jvchat-hide");
+        if (messageBloc.originalHTML) {
+            originalContentDiv.innerHTML = messageBloc.originalHTML;
+        }
+    };
+
+    buttonsDiv.appendChild(submitButton);
+    buttonsDiv.appendChild(cancelButton);
+
+    editionDiv.appendChild(textarea);
+    editionDiv.appendChild(buttonsDiv);
+
+    originalContentDiv.classList.add("jvchat-hide");
+    editionDiv.classList.remove("jvchat-hide");
+    textarea.focus();
+}
+
+async function submitEditedMessage(messageBloc, messageId, newText, formSession, ajaxHash) {
+    const topicId = getTopicId();
+    const forumId = getForumId();
+    const originalContentDiv = messageBloc.querySelector(".jvchat-content");
+    const editionDiv = messageBloc.querySelector(".jvchat-edition");
+
+    const formData = new FormData();
+    formData.append("text", newText);
+    formData.append("messageId", messageId);
+    formData.append("topicId", topicId);
+    formData.append("forumId", forumId);
+    formData.append("group", "1");
+
+    for (const key in formSession) {
+        if (Object.hasOwnProperty.call(formSession, key)) {
+            formData.append(key, formSession[key]);
+        }
+    }
+    formData.append("ajax_hash", ajaxHash);
+
+    editionDiv.classList.add("jvchat-disabled-form");
+
+    try {
+        const response = await fetch("https://www.jeuxvideo.com/forums/message/edit", {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: formData
+        });
+        const data = await response.json();
+
+        editionDiv.classList.remove("jvchat-disabled-form");
+
+        if (handleApiResponseError(data, "enregistrement de l'édition")) {
+            return;
+        }
+
+        if (data.html) {
+            originalContentDiv.innerHTML = data.html;
+            fixMessage(originalContentDiv);
+            detectMosaic(originalContentDiv);
+            improveImages(originalContentDiv);
+        }
+
+        editionDiv.classList.add("jvchat-hide");
+        editionDiv.innerHTML = '';
+        originalContentDiv.classList.remove("jvchat-hide");
+
+        if (lastEditionTime && lastEditionTime[messageId]) {
+            lastEditionTime[messageId][0] = getTimestamp();
+            lastEditionTime[messageId][1] = "édité";
+        } else if (lastEditionTime) {
+            lastEditionTime[messageId] = [getTimestamp(), "édité", false];
+        }
+
+        const eventDetail = { 'detail': { id: messageId, isEdit: true, newHtml: data.html } };
+        const customEvent = new CustomEvent('jvchat:newmessage', eventDetail);
+        dispatchEvent(customEvent);
+
+        if (typeof forceUpdate === 'function') {
+            setTimeout(forceUpdate, 250);
+        }
+
+
+    } catch (error) {
+        displayError(`Fetch error : ${error.message}`);
+        editionDiv.classList.remove("jvchat-disabled-form");
+    }
+}
 
 
 function editMessage(bloc) {
@@ -2348,10 +2596,14 @@ function makeMessage(message) {
     let authorHref = exists ? `href="https://www.jeuxvideo.com/profil/${author.toLowerCase()}?mode=infos"` : "";
     let authorTitle = exists ? `title="Ouvrir le profil de ${author}"` : "";
     let authorAvatarHidden = exists ? "" : "class='jvchat-hide-visibility'";
-    let editionSpan = '<span class="jvchat-edit jvchat-picto" title="Modifier"></span>';
+
+    let editionButtonHtml = "";
+    if (currentUser && currentUser.author && message.author.toLowerCase() === currentUser.author.toLowerCase()) {
+        editionButtonHtml = `<span class="jvchat-edit jvchat-picto" title="Modifier" data-message-id="${id}"></span>`;
+    }
     let deletionSpan = '<span class="jvchat-delete jvchat-picto" title="Supprimer"></span>';
     let deletion = (currentUser.author === undefined) || (message.author.toLowerCase() !== currentUser.author.toLowerCase()) ? "" : deletionSpan;
-    let edition = (currentUser.author === undefined) || (message.author.toLowerCase() !== currentUser.author.toLowerCase()) ? "" : editionSpan;
+
     let html =
         `<div class="jvchat-bloc-message">
             <div class="jvchat-message" jvchat-id=${id}>
@@ -2365,18 +2617,13 @@ function makeMessage(message) {
                         <h5 class="jvchat-author">${author}</h5>
                         <div class="jvchat-tooltip">
                             ${deletion}
-                            ${edition}
+                            ${editionButtonHtml}
                             <span class="jvchat-picto jvchat-quote" title="Citer"></span>
                             <small class="jvchat-date" to-quote="${toQuoteDate}" title="${titleDate}">${textDate}</small>
                         </div>
                     </div>
                     <div class="jvchat-content">${content.outerHTML}</div>
                     <div class="jvchat-edition jvchat-hide">
-                        <textarea class="jvchat-edition-textarea jvchat-textarea"></textarea>
-                        <div class="jvchat-buttons">
-                            <button tabindex="0" type="button" class='jvchat-edition-check jvchat-button-top' title="Valider la modification"></button>
-                            <button tabindex="0" type="button" class='jvchat-edition-cancel jvchat-button-bottom' title="Annuler la modification"></button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -3545,7 +3792,10 @@ function dontScrollOnExpand(event) {
         */
     } else if (classes.contains("jvchat-edit")) {
         let bloc = target.closest(".jvchat-message");
-        requestEdit(bloc);
+        let messageId = target.dataset.messageId || bloc.getAttribute("jvchat-id");
+        if (messageId) {
+            requestMessageDataForEdit(messageId, bloc);
+        }
     } else if (classes.contains("jvchat-delete")) {
         let bloc = target.closest(".jvchat-message");
         event.stopPropagation();
