@@ -3461,7 +3461,8 @@ function insertAtCursor(input, textToInsert) {
     const value = input.value;
     const start = input.selectionStart;
     const end = input.selectionEnd;
-    input.value = value.slice(0, start) + textToInsert + value.slice(end);
+    const newValue = input.value = value.slice(0, start) + textToInsert + value.slice(end);
+    setTextAreaValue(input, newValue);
     input.selectionStart = input.selectionEnd = start + textToInsert.length;
 }
 
