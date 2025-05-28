@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.114
+// @version        0.1.115
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -177,8 +177,9 @@ body {
 
 #jvchat-leftbar {
     max-width: 15rem;
-    flex-grow: 100000;
-    flex-shrink: 100;
+    width: 10rem;
+    flex-grow: 1;
+    flex-shrink: 1;
     position: relative;
 }
 
@@ -268,6 +269,28 @@ label {
 .messageEditor__containerPreview {
     display: none;
 }
+
+
+.messageEditor__containerEdit {
+    margin-bottom: 0px;
+    width: 100%;
+}
+
+#forums-post-message-editor > form:not([class]) {
+    display: flex;
+    align-items: center;
+}
+
+.simpleButton.postMessage {
+    height: 4rem;
+    width: 3rem;
+    margin: 0 0.4rem;
+}
+
+.postMessage__label {
+    display: none;
+}
+
 
 .jvchat-edition-textarea {
     resize: none;
@@ -733,6 +756,22 @@ hr.jvchat-ruler:first-of-type {
     line-height: normal;
 }
 
+.buttonsEditor__button {
+    font-size: 1.2rem;
+    height: 1.2rem;
+    width: 1.2rem;
+    line-height: 1.0rem;
+    text-align: center;
+}
+
+.buttonsEditor__group {
+  margin-right: 0.4rem
+}
+
+.buttonsEditor__groupPreview {
+    display: none;
+}
+
 #jvchat-main {
     overflow-y: auto;
     padding: 0.35rem 0.875rem;
@@ -747,6 +786,8 @@ hr.jvchat-ruler:first-of-type {
 
 #jvchat-leftbar.jvchat-leftbar-reduced {
     flex-grow: 0;
+    flex-shrink: 10;
+    width: auto;
 }
 
 #jvchat-leftbar.jvchat-leftbar-reduced > .panel > .panel-body {
@@ -3461,7 +3502,7 @@ function insertAtCursor(input, textToInsert) {
     const value = input.value;
     const start = input.selectionStart;
     const end = input.selectionEnd;
-    input.value = value.slice(0, start) + textToInsert + value.slice(end);
+    setTextAreaValue(input, value.slice(0, start) + textToInsert + value.slice(end));
     input.selectionStart = input.selectionEnd = start + textToInsert.length;
 }
 
