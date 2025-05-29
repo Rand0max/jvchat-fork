@@ -10,4 +10,4 @@
 
 ### Auteur du script : **Blaff**
 ### Mainteneur : **Rand0max**
-### Dernière version : **0.1.118 - 28/05/2025**
+### Dernière version : **0.1.119 - 29/05/2025**

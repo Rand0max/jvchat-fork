@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.118
+// @version        0.1.119
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -1551,23 +1551,51 @@ function getLastPage(document) {
 function parseMessage(elem) {
     let conteneurs = elem.getElementsByClassName("conteneur-message");
     let conteneur = conteneurs[conteneurs.length - 1];
+
     let author = conteneur.getElementsByClassName("bloc-pseudo-msg")[0].textContent.trim();
+
     let blacklisted = conteneurs[0].classList.contains("conteneur-message-blacklist");
+
     let avatar = conteneur.getElementsByClassName("user-avatar-msg")[0];
     if (avatar !== undefined) {
         avatar = avatar.getAttribute("data-src");
     }
+
     let date = conteneur.getElementsByClassName("bloc-date-msg")[0].textContent.trim();
+
     let content = conteneur.getElementsByClassName("txt-msg")[0];
+
     let id = parseInt(elem.getAttribute("data-id"));
+
     let edited = elem.getElementsByClassName("info-edition-msg")[0];
+
     if (edited !== undefined) {
         let msgEdited = edited.textContent.trim();
         edited = msgEdited.match(/Message édité le .*? à (.*?) par/i)[1];
     }
+
+    let signalerHTML = "";
+    const options = elem.getElementsByClassName("bloc-options-msg")[0];
+    if (options) {
+        let signalElem = options.querySelector(".picto-msg-exclam");
+        if (signalElem) {
+            let jvChatSignalElem = signalElem.cloneNode(true);
+            jvChatSignalElem.classList.toggle("jvchat-picto", true);
+            jvChatSignalElem.classList.add("jvchat-signal");
+            signalerHTML = jvChatSignalElem.outerHTML;
+        }
+    }
+
     return {
-        author: author, dateString: date, date: parseDate(date), avatar: avatar, edited: edited,
-        id: id, content: content, blacklisted: blacklisted
+        author: author,
+        dateString: date,
+        date: parseDate(date),
+        avatar: avatar,
+        edited: edited,
+        id: id,
+        content: content,
+        blacklisted: blacklisted,
+        signaler: signalerHTML
     };
 }
 
@@ -2632,6 +2660,7 @@ function makeMessage(message) {
                             ${deletion}
                             ${editionButtonHtml}
                             <span class="jvchat-picto jvchat-quote" title="Citer"></span>
+                            ${message.signaler}
                             <small class="jvchat-date" to-quote="${toQuoteDate}" title="${titleDate}">${textDate}</small>
                         </div>
                     </div>
