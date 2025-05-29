@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.117
+// @version        0.1.118
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -192,6 +192,10 @@ body {
 }
 
 
+.jvchat-textarea-focus {
+    height: 8rem !important;
+}
+
 .jvchat-disabled-form {
     opacity: 0.5;
     cursor: not-allowed;
@@ -230,7 +234,7 @@ body {
 
 #jvchat-leftbar {
     max-width: 15rem;
-    width: 10rem;
+    width: 12rem;
     flex-grow: 1;
     flex-shrink: 1;
     position: relative;
@@ -316,7 +320,8 @@ label {
 #message_topic {
     resize: none;
     min-width: unset;
-    max-height: 5rem;
+    max-height: 8rem;
+    height: 4rem;
 }
 
 .messageEditor__containerPreview {
@@ -1397,6 +1402,23 @@ function makeFormDataFromObject(dict) {
     return formData;
 }
 
+function manageTextareaSimpleHeight() {
+    const textarea = getTextArea();
+    const postButton = document.querySelector('.postMessage');
+
+    if (!textarea || !postButton) {
+        return;
+    }
+
+    textarea.addEventListener('focus', function () {
+        textarea.classList.toggle("jvchat-textarea-focus", true);
+    });
+
+    postButton.addEventListener('click', function () {
+        textarea.classList.toggle("jvchat-textarea-focus", false);
+    });
+}
+
 
 function getTopicLocked(elem) {
     let lock = elem.getElementsByClassName("message-lock-topic")[0];
@@ -1680,13 +1702,6 @@ function replacePostButton(clickEvent) {
 }
 
 function clearPage(document) {
-    let buttons = `
-        <div id="jvchat-buttons-main" class='jvchat-buttons'>
-            <button id='jvchat-post' tabindex="4" type="button" class='jvchat-hide jvchat-button-top' title="Envoyer le message"></button>
-            <button id='jvchat-reduce' tabindex="5" type="button" class='jvchat-hide jvchat-button-bottom' title="Réduire la zone de texte"></button>
-            <button id='jvchat-enlarge' tabindex="4" type="button" class='jvchat-button-solo' title="Agrandir la zone de texte"></button>
-        <div>`;
-
     document.head.insertAdjacentHTML("beforeend", CSS);
 
     let previsu = document.getElementById("bloc-formulaire-forum").getElementsByClassName("previsu-editor")[0];
@@ -1694,7 +1709,7 @@ function clearPage(document) {
         previsu.parentElement.removeChild(previsu);
     }
 
-    let messageTopic = document.getElementById("message_topic");
+    let messageTopic = getTextArea();
     if (messageTopic) {
         messageTopic.classList.add("jvchat-textarea");
         messageTopic.setAttribute("placeholder", "Hop hop hop, le message ne va pas s'écrire tout seul !");
@@ -2243,8 +2258,6 @@ async function submitEditedMessage(messageBloc, messageId, newText, formSession,
         if (typeof forceUpdate === 'function') {
             setTimeout(forceUpdate, 250);
         }
-
-
     } catch (error) {
         displayError(`Fetch error : ${error.message}`);
         editionDiv.classList.remove("jvchat-disabled-form");
@@ -2416,7 +2429,7 @@ function computeHeight(lines) {
 }
 
 function setTextareaHeight(plusOne) {
-    let textarea = document.getElementById("message_topic");
+    let textarea = getTextArea();
     if (!isReduced) {
         textarea.style["height"] = "";
         return;
@@ -2656,7 +2669,7 @@ function buildQuoteEvent(messageId) {
         content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
         content += '\n\n';
 
-        let textarea = document.getElementById("message_topic");
+        let textarea = getTextArea();
         if (isReduced) {
             toggleTextarea();
         }
@@ -2725,6 +2738,7 @@ function addMessages(messages, editing, requestTimestamp) {
             if (isDown) {
                 setScrollDown();
             }
+            buildQuoteEvent(id);
             let event = new CustomEvent('jvchat:newmessage', { 'detail': { id: id, isEdit: true } });
             dispatchEvent(event);
             continue;
@@ -3046,11 +3060,13 @@ function triggerJVChat() {
     forumSide.innerHTML = escape(forum.title);
 
     let defaultReduced = configuration["default_reduced"];
-    let messageTopic = document.getElementById("message_topic");
+    let messageTopic = getTextArea();
 
     if (messageTopic && (defaultReduced === false || (messageTopic.value !== ""))) {
         toggleTextarea();
     }
+
+    manageTextareaSimpleHeight();
 
     let event = new CustomEvent('jvchat:activation');
     dispatchEvent(event);
@@ -3779,17 +3795,6 @@ function dontScrollOnExpand(event) {
         if (isDown) {
             setScrollDown();
         }
-    } else if (classes.contains("jvchat-quote")) {
-        /*
-        let bloc = target.closest(".jvchat-message");
-        let quote = reverseQuote(bloc);
-        let textarea = document.getElementById("message_topic");
-        if (isReduced) {
-            toggleTextarea();
-        }
-        insertAtCursor(textarea, quote);
-        textarea.focus();
-        */
     } else if (classes.contains("jvchat-edit")) {
         let bloc = target.closest(".jvchat-message");
         let messageId = target.dataset.messageId || bloc.getAttribute("jvchat-id");
