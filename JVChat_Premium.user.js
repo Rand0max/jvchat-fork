@@ -4,7 +4,7 @@
 // @author         Blaff & Rand0max
 // @namespace      JVChatPremium
 // @license        MIT
-// @version        0.1.119
+// @version        0.1.120
 // @match          http://*.jeuxvideo.com/forums/42-*
 // @match          https://*.jeuxvideo.com/forums/42-*
 // @match          http://*.jeuxvideo.com/forums/1-*
@@ -2106,7 +2106,10 @@ async function postMessage() {
 
         const res = await response.json();
 
-        handleApiResponseError(res);
+        formulaire.classList.remove("jvchat-disabled-form");
+        textarea.removeAttribute("disabled");
+
+        if (handleApiResponseError(res, 'l\'envoi du message')) return;
 
         let messageId = res?.messageId || res?.id || null;
         if (!messageId && response.url) {
@@ -2117,9 +2120,6 @@ async function postMessage() {
             const event = new CustomEvent('jvchat:postmessage', detail);
             dispatchEvent(event);
         }
-
-        formulaire.classList.remove("jvchat-disabled-form");
-        textarea.removeAttribute("disabled");
 
         setTimeout(tryCatch(forceUpdate), 1000);
 
@@ -2692,9 +2692,13 @@ function buildQuoteEvent(messageId) {
         const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${ajaxHash}`;
         const response = await fetch(url);
         const result = await response.json();
+        let quoteText = result.txt;
+        if (!quoteText?.length) {
+            quoteText = message.querySelector('.txt-msg')?.innerText.trim();
+        }
 
         let content = `\n> Le ${date} ${author} a écrit :\n> `;
-        content += result.txt.split('\n').join('\n> ');
+        content += quoteText.split('\n').join('\n> ');
         content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
         content += '\n\n';
 
