@@ -1,17 +1,18 @@
 // ==UserScript==
-// @name           JVChat Premium FORK by Rand0max
-// @description    Outil de discussion instantanée pour les forums de Jeuxvideo.com
-// @author         Blaff & Rand0max
-// @namespace      JVChatPremium
-// @license        MIT
-// @version        0.1.120
-// @match          http://*.jeuxvideo.com/forums/42-*
-// @match          https://*.jeuxvideo.com/forums/42-*
-// @match          http://*.jeuxvideo.com/forums/1-*
-// @match          https://*.jeuxvideo.com/forums/1-*
-// @grant          none
-// @downloadURL https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
-// @updateURL https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
+// @name            JVChat Premium FORK by Rand0max
+// @description     Outil de discussion instantanée pour les forums de Jeuxvideo.com
+// @author          Blaff & Rand0max
+// @namespace       JVChatPremium
+// @license         MIT
+// @version         0.1.121
+// @match           http://*.jeuxvideo.com/forums/42-*
+// @match           https://*.jeuxvideo.com/forums/42-*
+// @match           http://*.jeuxvideo.com/forums/1-*
+// @match           https://*.jeuxvideo.com/forums/1-*
+// @grant           none
+// @downloadURL     https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
+// @updateURL       https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
+// @run-at          document-end
 // ==/UserScript==
 
 
@@ -139,6 +140,10 @@ body {
     overflow-y: unset;
 }
 
+.messageEditor__topInfo {
+    display: none;
+}
+
 
 /* Edition */
 .jvchat-edition {
@@ -234,7 +239,7 @@ body {
 
 #jvchat-leftbar {
     max-width: 15rem;
-    width: 12rem;
+    width: 13rem;
     flex-grow: 1;
     flex-shrink: 1;
     position: relative;
@@ -1435,6 +1440,31 @@ function getTopicError(elem) {
         return error;
     }
     return `Le topic présente une erreur: ${error.getAttribute("alt")}`;
+}
+
+function autoHideTurnstileErrorMessages() {
+    const captchaContainers = document.querySelectorAll('.js-captcha');
+    captchaContainers.forEach(container => {
+        const observer = new MutationObserver((mutationsList, observerInstance) => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList' || mutation.type === 'characterData' || mutation.type === 'subtree') {
+                    const childDivs = Array.from(container.children).filter(el => el.tagName === 'DIV');
+                    if (childDivs.length >= 2) {
+                        const turnstileWidgetDiv = childDivs[childDivs.length - 1];
+                        if (turnstileWidgetDiv && turnstileWidgetDiv.textContent.includes("[Cloudflare Turnstile]")) {
+                            turnstileWidgetDiv.style.display = 'none';
+                        }
+                    }
+                }
+            }
+        });
+
+        observer.observe(container, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    });
 }
 
 
@@ -3100,6 +3130,7 @@ function triggerJVChat() {
     }
 
     manageTextareaSimpleHeight();
+    autoHideTurnstileErrorMessages();
 
     let event = new CustomEvent('jvchat:activation');
     dispatchEvent(event);
@@ -3361,7 +3392,7 @@ function parsePage(res, requestTimestamp) {
     if (isError) {
         isError = false;
         updateIntervalIdx = 2;
-        removeFixedAlert("Le topic ne retourne plus d'erreur", true);
+        //removeFixedAlert("Le topic ne retourne plus d'erreur", true);
     }
 
     let form = getForm(res);
