@@ -314,19 +314,19 @@ label {
 
 #jvchat-post::before {
     font-family: "jvchat-icons";
-    content: "\uEA28";
+    content: "\EA28";
     font-size: 1rem;
 }
 
 #jvchat-reduce::before {
     font-family: "jvchat-icons";
-    content: "\uEA8E";
+    content: "\EA8E";
     font-size: 1.4rem;
 }
 
 #jvchat-enlarge::before {
     font-family: "jvchat-icons";
-    content: "\uEA84";
+    content: "\EA84";
     font-size: 1.4rem;
 }
 
@@ -537,7 +537,7 @@ label {
 
 .jvchat-edition-check::before {
     font-family: "jvchat-icons";
-    content: "\uEA0E";
+    content: "\EA0E";
 }
 
 .jvchat-edition-cancel {
@@ -550,7 +550,7 @@ label {
 
 .jvchat-edition-cancel::before {
     font-family: "jvchat-icons";
-    content: "\uEA77";
+    content: "\EA77";
 }
 
 .jvchat-edition-textarea {
@@ -675,7 +675,7 @@ hr.jvchat-ruler:first-of-type {
 
 #jvchat-user-mp::before {
     font-family: "jvchat-icons";
-    content: "\uEA43";
+    content: "EA43";
 }
 
 #jvchat-user-notif {
@@ -686,7 +686,7 @@ hr.jvchat-ruler:first-of-type {
 
 #jvchat-user-notif::before {
     font-family: "jvchat-icons";
-    content: "\uEA7B";
+    content: "\EA7B";
 }
 
 #jvchat-user-notif.has-notif::after,
@@ -1071,21 +1071,21 @@ hr.jvchat-ruler:first-of-type {
 }
 
 #jvchat-leftbar-config-open::before {
-    content: "\uEA6F";
+    content: "\EA6F";
     font-family: "jvchat-icons";
 }
 
 #jvchat-leftbar-config-close::before {
-    content: "\uEA13";
+    content: "\EA13";
     font-family: "jvchat-icons";
 }
 
 #jvchat-leftbar-reduce::before {
-    content: "\uEA8C";
+    content: "\EA8C";
     font-family: "jvchat-icons";
 }
 
 #jvchat-leftbar-extend::before {
-    content: "\uEA88";
+    content: "\EA88";
     font-family: "jvchat-icons";
 }
