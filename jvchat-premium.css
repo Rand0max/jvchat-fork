@@ -675,7 +675,7 @@ hr.jvchat-ruler:first-of-type {
 
 #jvchat-user-mp::before {
     font-family: "jvchat-icons";
-    content: "EA43";
+    content: "\EA43";
 }
 
 #jvchat-user-notif {
