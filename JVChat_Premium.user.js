@@ -4,7 +4,7 @@
 // @author          Blaff & Rand0max
 // @namespace       JVChatPremium
 // @license         MIT
-// @version         0.1.121
+// @version         0.1.123
 // @match           http://*.jeuxvideo.com/forums/42-*
 // @match           https://*.jeuxvideo.com/forums/42-*
 // @match           http://*.jeuxvideo.com/forums/1-*
@@ -2288,7 +2288,7 @@ function parsePage(res, requestTimestamp) {
     if (isError) {
         isError = false;
         updateIntervalIdx = 2;
-        //removeFixedAlert("Le topic ne retourne plus d'erreur", true);
+        removeFixedAlert(undefined, true);
     }
 
     let form = getForm(res);
@@ -2500,7 +2500,7 @@ function request(mode, url, callbackSuccess, callbackError, callbackTimeout, dat
 
     xhr.onload = tryCatch(function xhrOnLoad() {
         if (xhr.status !== 200) {
-            callbackError(`La requête a retourné une erreur (${xhr.status}): ${xhr.statusText}`, xhr.status);
+            callbackError(`La requête a retourné une erreur (${xhr.status}) : ${xhr.statusText}`, xhr.status);
             return;
         }
         callbackSuccess(xhr.response, xhr.response.URL);
