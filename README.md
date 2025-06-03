@@ -14,7 +14,7 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.1.123 - 02/06/2025**
+### Dernière version : **0.1.124 - 03/06/2025**
 
 ## TODO (Blaff)
 
