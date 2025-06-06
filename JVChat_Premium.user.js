@@ -207,30 +207,7 @@ function getTopicError(elem) {
     return `Le topic présente une erreur: ${error.getAttribute("alt")}`;
 }
 
-function autoHideTurnstileErrorMessages() {
-    const captchaContainers = document.querySelectorAll('.js-captcha');
-    captchaContainers.forEach(container => {
-        const observer = new MutationObserver((mutationsList) => {
-            for (const mutation of mutationsList) {
-                if (mutation.type === 'childList' || mutation.type === 'characterData' || mutation.type === 'subtree') {
-                    const childDivs = Array.from(container.children).filter(el => el.tagName === 'DIV');
-                    if (childDivs.length >= 2) {
-                        const turnstileWidgetDiv = childDivs[childDivs.length - 1];
-                        if (turnstileWidgetDiv && turnstileWidgetDiv.textContent.includes("[Cloudflare Turnstile]")) {
-                            turnstileWidgetDiv.style.display = 'none';
-                        }
-                    }
-                }
-            }
-        });
 
-        observer.observe(container, {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
-    });
-}
 
 function parseSondage(elem) {
     let blocSondage = elem.getElementsByClassName("bloc-sondage")[0];
@@ -1817,13 +1794,18 @@ function hideCloudfareInfo() {
     }
     const observer = new MutationObserver(() => {
         let cfInfo = document.querySelector(".js-captcha-logo");
-        if (cfInfo) hideElement(cfInfo.parentElement);
+        if (cfInfo) {
+            const parent = cfInfo.parentElement;
+            hideElement(parent);
+            hideElement(parent.nextElementSibling); // cache le frère <div> suivante
+        }
     });
     observer.observe(document.body, {
         childList: true,
         subtree: true
     });
 }
+
 
 function triggerJVChat() {
     // TamperMonkey / Chrome bug: https://github.com/Tampermonkey/tampermonkey/issues/705#issuecomment-493895776
@@ -1903,7 +1885,6 @@ function triggerJVChat() {
     }
 
     manageTextareaSimpleHeight();
-    autoHideTurnstileErrorMessages();
 
     let event = new CustomEvent('jvchat:activation');
     dispatchEvent(event);
