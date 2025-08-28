@@ -1488,11 +1488,10 @@ function parseDate(string) {
 function buildQuoteEvent(messageId) {
     const message = document.querySelector(`.jvchat-message[jvchat-id='${messageId}']`);
     const quoteButton = message.querySelector('.jvchat-quote');
-    const ajaxHash = document.querySelector('input#ajax_hash_liste_messages').value;
     const author = message.querySelector('.jvchat-author').textContent.trim();
     const date = message.querySelector('.jvchat-date').getAttribute('to-quote');
     quoteButton.addEventListener('click', async () => {
-        const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${ajaxHash}`;
+        const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${freshHash}`;
         const response = await fetch(url);
         const result = await response.json();
         let quoteText = result.txt;
