@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.1.124
+// @version      0.1.125
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -1488,11 +1488,10 @@ function parseDate(string) {
 function buildQuoteEvent(messageId) {
     const message = document.querySelector(`.jvchat-message[jvchat-id='${messageId}']`);
     const quoteButton = message.querySelector('.jvchat-quote');
-    const ajaxHash = document.querySelector('input#ajax_hash_liste_messages').value;
     const author = message.querySelector('.jvchat-author').textContent.trim();
     const date = message.querySelector('.jvchat-date').getAttribute('to-quote');
     quoteButton.addEventListener('click', async () => {
-        const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${ajaxHash}`;
+        const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${freshHash}`;
         const response = await fetch(url);
         const result = await response.json();
         let quoteText = result.txt;
