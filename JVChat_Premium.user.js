@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.1.125
+// @version      0.1.126
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -31,6 +31,9 @@ via le data-attribut "jvchat-id".
 
 Il existe aussi l'évènement "jvchat:activation" qui est émis une seule fois : à l'initialisation
 lorsque le topic pass en mode "JVChat" après appui sur le bouton.
+
+L'évènement "jvchat:activated" qui est émis une seule fois : après l'initialisation
+lorsque les messages sont chargés.
 
 Il existe enfin l'évènement "jvchat:postmessage". Celui-ci est émis chaque fois qu'un message est posté par l'utilisateur actuel.
 Il contient l'identifiant du message, le contenu du message, et l'auteur du message.
@@ -1904,13 +1907,16 @@ function triggerJVChat() {
     manageTextareaSimpleHeight();
     autoHideTurnstileErrorMessages();
 
-    let event = new CustomEvent('jvchat:activation');
-    dispatchEvent(event);
+    let activationEvent = new CustomEvent('jvchat:activation');
+    dispatchEvent(activationEvent);
 
     let page = topic.lastPage > 1 ? topic.lastPage - 1 : topic.lastPage;
     updateMessages(page, true);
 
     setInterval(tryCatch(checkEdited), checkEditedInterval);
+    
+    let activatedEvent = new CustomEvent('jvchat:activated');
+    dispatchEvent(activatedEvent);
 }
 
 function refreshNoLongerDegraded() {
