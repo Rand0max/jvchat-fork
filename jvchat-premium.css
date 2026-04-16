@@ -40,8 +40,114 @@ header.jv-header-menu,
 .layout__contentAside,
 .layout__footer,
 .layout__contentTop,
-.header {
+.header,
+.messageUser,
+.messageUser__anchor,
+.container__pagination,
+.container__navTop,
+.container__navBottom,
+.titleMessagesUsers,
+.sidebarPanel,
+.container__sidebar,
+#js-list-message-tools-actions,
+.buttonsNavbar__sticky,
+.js-list-message-main-toolbar,
+.sideCardForum,
+.js-side-module-forum-info,
+.js-side-module-forum-favorite {
   display: none !important;
+}
+
+/* Ensure right sidebar and ads are hidden */
+#page-messages-forum > .layout__contentAside,
+.layout__row.layout__contentAside,
+#forum-main-col ins[data-ad-position],
+#forum-main-col .nosticky,
+.container__postTitle {
+  display: none !important;
+}
+
+/* Override JVC grid layout with flex so JVChat panel + messages align horizontally */
+#page-messages-forum {
+  display: flex !important;
+  margin: 0;
+  padding: 0;
+}
+#page-messages-forum > .layout__contentMain {
+  display: flex !important;
+  padding: 0 !important;
+  height: 100%;
+  max-width: unset !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* Flex column so #jvchat-main fills #forum-main-col inside .container__main.
+   NOTE: the real layout grid is applied on #forum-main-col itself (see below)
+   because there are TWO .container__main siblings (messages + form). */
+#forum-main-col > .container__main {
+  min-width: 0;
+}
+#forum-main-col > .container__main > #listMessages {
+  display: block;
+  min-height: 0;
+}
+
+/* Force the full outer layout chain to viewport height with no scroll so only
+   #jvchat-main scrolls internally and the input stays pinned at the bottom. */
+html,
+body,
+.layout,
+.layout-main,
+.layout-content,
+.layout__row,
+.layout__contentMain {
+  height: 100% !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* #forum-main-col has TWO .container__main children in the new structure:
+   - the first wraps #listMessages > #jvchat-main (scrollable messages)
+   - the second wraps #bloc-formulaire-forum (input form)
+   Make #forum-main-col itself a CSS Grid with rows `auto 1fr auto` so the
+   messages container grows to fill, and the form stays pinned at the bottom. */
+#forum-main-col {
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
+  grid-template-columns: 1fr !important;
+  overflow: hidden !important;
+  max-height: 100vh !important;
+  height: 100% !important;
+}
+/* First .container__main: messages (grows, scrolls internally) */
+#forum-main-col > .container__main:has(#listMessages) {
+  grid-row: 2 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  display: block !important;
+}
+#forum-main-col > .container__main:has(#listMessages) > #listMessages {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+#forum-main-col > .container__main:has(#listMessages) #jvchat-main {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
+/* Second .container__main: form (natural height, pinned at bottom) */
+#forum-main-col > .container__main:has(#bloc-formulaire-forum) {
+  grid-row: 3 !important;
+  display: block !important;
+  visibility: visible !important;
+}
+/* Force everything else inside #forum-main-col (ads, stray divs) to row 1
+   so they're either hidden or collapse to 0. */
+#forum-main-col > *:not(.container__main) {
+  grid-row: 1 !important;
 }
 
 @font-face {
@@ -54,7 +160,10 @@ body,
 #jvchat-main,
 #page-messages-forum,
 #forum-main-col,
-#forum-main-col > .conteneur-messages-pagi {
+#forum-main-col > .conteneur-messages-pagi,
+#forum-main-col > #listMessages,
+#forum-main-col > .container__main,
+#forum-main-col > .container__main > #listMessages {
   height: 100%;
   width: 100%;
 }
@@ -65,10 +174,6 @@ body,
 
 .jvchat-hide-visibility {
   visibility: hidden;
-}
-
-body {
-  overflow-y: unset;
 }
 
 .messageEditor__topInfo {
@@ -197,21 +302,17 @@ body {
 #page-messages-forum {
   margin: 0;
   padding: 0;
-  display: block;
+  display: flex !important;
   line-height: 1.42857;
   font-size: 0.875rem;
 }
 
 #page-messages-forum > .layout__contentMain {
-  display: flex;
+  display: flex !important;
   padding: 0 !important;
   height: 100%;
-  max-width: unset;
-}
-
-#page-messages-forum {
-  margin: 0;
-  display: flex;
+  max-width: unset !important;
+  width: 100% !important;
 }
 
 label {
@@ -234,9 +335,17 @@ label {
   flex-grow: 0;
 }
 
-#forum-main-col > .conteneur-messages-pagi {
+#forum-main-col > .conteneur-messages-pagi,
+#forum-main-col > #listMessages,
+#forum-main-col > .container__main > #listMessages {
   display: flex;
   flex-direction: column;
+}
+
+#forum-main-col > .container__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 #page-messages-forum > .container-content {
@@ -251,7 +360,8 @@ label {
   margin: 0;
 }
 
-#message_topic {
+#message_topic,
+#message_reponse {
   resize: none;
   min-width: unset;
   max-height: 8rem;
@@ -267,7 +377,8 @@ label {
   width: 100%;
 }
 
-#forums-post-message-editor > form:not([class]) {
+#forums-post-message-editor > form:not([class]),
+#forums-post-message-editor > form.messageEditForm {
   display: flex;
   align-items: center;
 }
@@ -289,7 +400,8 @@ label {
   min-height: 3.5rem;
 }
 
-.jvchat-reduced #message_topic {
+.jvchat-reduced #message_topic,
+.jvchat-reduced #message_reponse {
   padding: 0.3rem;
   height: 1.7rem;
   max-height: 6.5rem;
@@ -443,7 +555,7 @@ label {
 }
 
 .jvchat-message-deleted:after {
-  content: "Message supprimé";
+  content: "Message supprim\0000e9";
   position: absolute;
   top: 40%;
   left: 50%;
@@ -588,21 +700,25 @@ hr.jvchat-ruler:first-of-type {
   line-height: 1.1rem;
 }
 
-.jvchat-content > .txt-msg > p:last-of-type {
+.jvchat-content > .txt-msg > p:last-of-type,
+.jvchat-content > .messageUser__msg > p:last-of-type {
   margin-bottom: 0;
 }
 
-.jvchat-content > .txt-msg p {
+.jvchat-content > .txt-msg p,
+.jvchat-content > .messageUser__msg p {
   margin-bottom: 0.2rem;
 }
 
-.jvchat-content .text-enrichi-forum blockquote.blockquote-jv {
+.jvchat-content .text-enrichi-forum blockquote.blockquote-jv,
+.jvchat-content blockquote.message__blockquote {
   margin: 0.2rem 0;
   padding: 0rem 0.3rem 0 0.3rem;
   color: #8b8b8b;
 }
 
-.jvchat-content .text-enrichi-forum .nested-quote-toggle-box {
+.jvchat-content .text-enrichi-forum .nested-quote-toggle-box,
+.jvchat-content .nested-quote-toggle-box {
   position: relative !important;
 }
 
@@ -634,7 +750,8 @@ hr.jvchat-ruler:first-of-type {
   padding-top: 100%;
 }
 
-.jvchat-content .img-shack {
+.jvchat-content .img-shack,
+.jvchat-content .message__urlImg {
   height: 39px;
   width: 52px;
   display: inline-block;
@@ -644,7 +761,8 @@ hr.jvchat-ruler:first-of-type {
   object-fit: contain;
 }
 
-.jvchat-content .img-stickers {
+.jvchat-content .img-stickers,
+.jvchat-content .message__urlImgSticker {
   max-height: 39px;
   min-height: 39px;
   width: auto;
@@ -915,7 +1033,7 @@ hr.jvchat-ruler:first-of-type {
 }
 
 #jvchat-main.jvchat-hide-mosaics .jvchat-mosaic-root::before {
-  content: "Mosaïque Cachée ¯\\\\_(ツ)_/¯";
+  content: "Mosa\0000efque Cach\0000e9e \0000af\\\\_(\0030c4)_/\0000af";
   color: black;
   text-align: center;
   font-size: 10px;

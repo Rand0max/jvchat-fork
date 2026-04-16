@@ -14,7 +14,12 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.1.127 - 08/09/2025**
+### Dernière version : **0.2.0 - 17/04/2026**
+
+## Changelog
+
+### 0.2.0 — 17/04/2026
+- Support complet de la refonte des forums JVC 2026
 
 ## TODO (Blaff)
 
