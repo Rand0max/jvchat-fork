@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.0
+// @version      0.2.2
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -621,14 +621,11 @@ function fixMessage(elem) {
         a.innerHTML = jvcare.innerHTML;
         jvcare.outerHTML = a.outerHTML;
     }
-    // New structure: blockquote.message__blockquote > blockquote.message__blockquote
-    let togglableQuotes = Array.from(elem.querySelectorAll("blockquote > blockquote"));
-    if (togglableQuotes.length === 0) {
-        togglableQuotes = Array.from(elem.querySelectorAll(".text-enrichi-forum > blockquote > blockquote"));
-    }
+
+    let togglableQuotes = Array.from(elem.querySelectorAll(".messageUser__msg.txt-msg > blockquote > blockquote"));
     for (let togglableQuote of togglableQuotes) {
-        let toggleButton = document.createElement("div");
-        toggleButton.classList.add("nested-quote-toggle-box");
+        let toggleButton = document.createElement("button");
+        toggleButton.classList.add("message__collapsedQuote");
         togglableQuote.insertBefore(toggleButton, togglableQuote.firstChild);
         // The click event is bound in the "dontScrollOnExpand()" function
     }
@@ -903,9 +900,11 @@ function clearPage(document) {
     }
 
     let toolbar = formContainer ? (formContainer.querySelector(".buttonsEditor, .jv-editor-toolbar")) : null;
+    /*
     if (toolbar) {
         toolbar.classList.add("jvchat-hide");
     }
+    */
 
     document.getElementById("jvchat-main").addEventListener("click", tryCatch(dontScrollOnExpand));
 
@@ -1761,24 +1760,159 @@ function parseDate(string) {
     return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
 }
 
+function reverseMessage(node, isInit, isUl) {
+    let quote = "";
+    let prevIsP = false;
+    let startsWithSpoil = false;
+
+    for (let child of node.childNodes) {
+        let name = child.nodeName;
+
+        switch (name) {
+            case "P": {
+                quote += reverseMessage(child) + "\n\n";
+                break;
+            }
+            case "STRONG": {
+                quote += "'''" + reverseMessage(child) + "'''";
+                break;
+            }
+            case "U": {
+                quote += "<u>" + reverseMessage(child) + "</u>";
+                break;
+            }
+            case "S": {
+                quote += "<s>" + reverseMessage(child) + "</s>";
+                break;
+            }
+            case "EM": {
+                quote += "''" + reverseMessage(child) + "''";
+                break;
+            }
+            case "BR": {
+                quote += "\n";
+                break;
+            }
+            case "UL": {
+                quote += reverseMessage(child, false, true) + "\n\n";
+                break;
+            }
+            case "OL": {
+                quote += reverseMessage(child, false, false) + "\n\n";
+                break;
+            }
+            case "LI": {
+                if (isUl === true) {
+                    quote += "* " + reverseMessage(child) + "\n";
+                } else {
+                    quote += "# " + reverseMessage(child) + "\n";
+                }
+                break;
+            }
+            case "DIV": {
+                let classList = child.classList;
+                if (classList.contains("message__spoil")) {
+                    if (quote === "") {
+                        startsWithSpoil = true;
+                    }
+                    quote += "<spoil>" + reverseMessage(child) + "</spoil>\n\n"
+                } else if (classList.contains("message__spoilContent")) {
+                    quote += reverseMessage(child);
+                }
+                break;
+            }
+            case "SPAN": {
+                let classList = child.classList;
+                if (classList.contains("message__spoil")) {
+                    quote += "<spoil>" + reverseMessage(child) + "</spoil>";
+                } else if (classList.contains("message__spoilContent")) {
+                    quote += reverseMessage(child);
+                }
+                break;
+            }
+            case "LABEL": {
+                break;
+            }
+            case "INPUT": {
+                break;
+            }
+            case "IMG": {
+                quote += child.alt;
+                break;
+            }
+            case "A": {
+                if (child.href) {
+                    quote += child.href;
+                } else {
+                    quote += reverseMessage(child);
+                }
+                break;
+            }
+            case "PRE": {
+                quote += reverseMessage(child) + "\n\n";
+                break;
+            }
+            case "CODE": {
+                quote += "<code>" + child.textContent + "</code>";
+                break;
+            }
+            case "BLOCKQUOTE": {
+                if (prevIsP) {
+                    quote = quote.trimEnd() + "\n" + reverseMessage(child).replace(/^/gm, '> ') + "\n\n";
+                } else {
+                    quote += reverseMessage(child).replace(/^/gm, '> ') + "\n\n";
+                }
+
+                break;
+            }
+            case "#text": {
+                // The "isInit" check is to prevent the empty text surroudning message
+                // However, it may happen that the root node contains valid text child, so it need to be added somehow
+                // For some reason, an "new line" may be missing in this case, so just add it
+                if (!isInit || child.textContent.trim() !== "") {
+                    quote += child.textContent;
+                    if (isInit && !quote.endsWith("\n")) {
+                        quote += "\n";
+                    }
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        if (name == "P") {
+            prevIsP = true;
+        } else {
+            prevIsP = false;
+        }
+    }
+
+    quote = quote.replace(/(\n){3,}/g, '\n\n');
+
+    if (startsWithSpoil && isInit) {
+        quote = "\n" + quote.trimEnd();
+    } else {
+        quote = quote.trim();
+    }
+
+    if (isInit) {
+        quote = quote.replace(/^/gm, '> ');
+    }
+
+    return quote;
+}
+
 function buildQuoteEvent(messageId) {
     const message = document.querySelector(`.jvchat-message[jvchat-id='${messageId}']`);
     const quoteButton = message.querySelector('.jvchat-quote');
     const author = message.querySelector('.jvchat-author').textContent.trim();
     const date = message.querySelector('.jvchat-date').getAttribute('to-quote');
-    quoteButton.addEventListener('click', async () => {
-        const url = `https://www.jeuxvideo.com/forums/ajax_citation.php?id_message=${messageId}&ajax_hash=${freshHash}`;
-        const response = await fetch(url);
-        const result = await response.json();
-        let quoteText = result.txt;
-        if (!quoteText?.length) {
-            quoteText = message.querySelector('.txt-msg')?.innerText.trim();
-        }
-
-        let content = `\n> Le ${date} ${author} a écrit :\n> `;
-        content += quoteText.split('\n').join('\n> ');
-        content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
-        content += '\n\n';
+    quoteButton.addEventListener('click', () => {
+        let header = `> Le ${date} ${author} a écrit :\n`;
+        let quoted = reverseMessage(message.querySelector(".txt-msg"), true);
+        let content = header + quoted + '\n\n';
 
         let textarea = getTextArea();
         if (isReduced) {
@@ -2757,18 +2891,16 @@ function dontScrollOnExpand(event) {
 
     let classes = target.classList;
 
-    if (classes.contains("nested-quote-toggle-box")) {
+    if (classes.contains("message__collapsedQuote")) {
         let isDown = isScrollDown();
-        let blockQuote = target.closest(".blockquote-jv");
-        let visible = blockQuote.getAttribute("data-visible");
-        let value = visible === "1" ? "" : "1";
-        blockQuote.setAttribute('data-visible', value);
+        let blockQuote = target.closest(".message__blockquote");
+        blockQuote.classList.toggle("message__blockquote--visible");
         if (isDown) {
             setScrollDown();
         }
     } else if (classes.contains("txt-spoil") || classes.contains("aff-spoil") || classes.contains("masq-spoil")) {
         event.preventDefault();
-        let check = target.closest(".bloc-spoil-jv").getElementsByClassName("open-spoil")[0];
+        let check = target.closest(".message__spoil").getElementsByClassName("open-spoil")[0];
         let isDown = isScrollDown();
         check.checked = !check.checked;
         if (isDown) {
