@@ -710,15 +710,19 @@ hr.jvchat-ruler:first-of-type {
   margin-bottom: 0.2rem;
 }
 
-.jvchat-content .text-enrichi-forum blockquote.blockquote-jv,
+.jvchat-content .text-enrichi-forum blockquote.message__blockquote,
 .jvchat-content blockquote.message__blockquote {
   margin: 0.2rem 0;
   padding: 0rem 0.3rem 0 0.3rem;
   color: #8b8b8b;
 }
 
-.jvchat-content .text-enrichi-forum .nested-quote-toggle-box,
-.jvchat-content .nested-quote-toggle-box {
+.message__collapsedQuote::before {
+   position: relative;
+}
+
+.jvchat-content .text-enrichi-forum .message__collapsedQuote,
+.jvchat-content .message__collapsedQuote {
   position: relative !important;
 }
 
@@ -1107,17 +1111,17 @@ hr.jvchat-ruler:first-of-type {
   background: #484c52 !important;
 }
 
-.jvchat-night-mode .text-enrichi-forum blockquote.blockquote-jv {
+.jvchat-night-mode .text-enrichi-forum blockquote.message__blockquote {
   border-left-color: #484c52 !important;
 }
 
-.jvchat-night-mode .text-enrichi-forum .nested-quote-toggle-box::after {
+.jvchat-night-mode .text-enrichi-forum .message__collapsedQuote::after {
   background-color: #484c52 !important;
   border-color: #737373 !important;
   color: #737373 !important;
 }
 
-.jvchat-night-mode .text-enrichi-forum .nested-quote-toggle-box:hover::before {
+.jvchat-night-mode .text-enrichi-forum .message__collapsedQuote:hover::before {
   color: #cbcdce !important;
 }
 
