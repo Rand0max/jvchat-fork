@@ -14,9 +14,12 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.0 - 17/04/2026**
+### Dernière version : **0.2.1 - 18/04/2026**
 
 ## Changelog
+
+### 0.2.1 — 18/04/2026
+- Correction des citations
 
 ### 0.2.0 — 17/04/2026
 - Support complet de la refonte des forums JVC 2026
