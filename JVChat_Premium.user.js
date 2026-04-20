@@ -298,7 +298,7 @@ function parseSondage(elem) {
         if (payload && payload.survey && payload.survey.hasSurvey && payload.survey.data) {
             let surveyData = payload.survey.data;
             let intitule = surveyData.title || "";
-            let answered = surveyData.hasVoted || false;
+            let answered = surveyData.hasVoted || surveyData.isClosed || false;
             let results = [];
             if (surveyData.responses) {
                 for (let answer of surveyData.responses) {
