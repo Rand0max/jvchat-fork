@@ -1957,7 +1957,8 @@ function submitSondageAnswer(event) {
 
         // New structure
         let topicId = getTopicId();
-        let surveyAjaxHash = (freshPayload || getForumPayload())?.survey?.ajaxToken || freshHash;
+        let payload = freshPayload || getForumPayload();
+        let surveyAjaxHash = payload?.survey?.ajaxToken;
         let url = `https://www.jeuxvideo.com/forums/survey/vote`;
         let formData = {};
         formData.ajax_hash = surveyAjaxHash;
