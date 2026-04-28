@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.1
+// @version      0.2.2
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -689,6 +689,9 @@ function improveImages(elem) {
     for (let image of imagesShack) {
         let src = image.src;
         let parent = image.parentNode;
+        if (!src || !parent || !parent.href) {
+            continue;
+        }
         let extension = parent.href.split(".").pop();
         let direct = src.replace(/(.*?)\/minis\/(.*)\.\w+/i, "$1/fichiers/$2." + extension);
         image.setAttribute("data-src-mini", src);
@@ -1761,6 +1764,107 @@ function parseDate(string) {
     return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
 }
 
+function buildNestedQuoteLines(node, depth) {
+    // Sérialise un noeud DOM en lignes préfixées par "> " selon la profondeur,
+    // en gérant récursivement les <blockquote> imbriqués.
+    //
+    // Subtilité importante : JVC limite la profondeur d'imbrication réelle des
+    // <blockquote> dans le HTML rendu. Au-delà, il aplatit les citations plus
+    // profondes en texte brut avec des marqueurs "> " littéraux dans le texte.
+    // Cette fonction traite ces marqueurs comme des niveaux additionnels.
+    const prefix = "> ".repeat(depth);
+    const result = [];
+    let textBuffer = "";
+    let lastWasBlockquote = false;
+
+    const flushText = () => {
+        let text = textBuffer.replace(/^\n+|\n+$/g, "");
+        textBuffer = "";
+        if (text.length === 0) return;
+        if (lastWasBlockquote) {
+            // Ligne vide quotée pour séparer la blockquote imbriquée du texte suivant
+            result.push(prefix.replace(/\s+$/, ""));
+        }
+        // Heuristique : si le texte ne contient aucun saut de ligne mais
+        // plusieurs marqueurs "> " (citations aplaties par JVC sans <br>),
+        // on découpe sur ces marqueurs pour reconstituer les lignes.
+        if (!text.includes("\n") && /\s>+\s/.test(text)) {
+            text = text.replace(/\s+(>+\s)/g, "\n$1");
+        }
+        for (let line of text.split("\n")) {
+            // Compte les marqueurs "> " déjà présents dans la ligne (citations
+            // aplaties qui doivent ajouter à la profondeur courante).
+            let extra = 0;
+            const m = line.match(/^((?:>\s*)+)/);
+            if (m) {
+                extra = (m[1].match(/>/g) || []).length;
+                line = line.slice(m[0].length);
+            }
+            const linePrefix = "> ".repeat(depth + extra);
+            if (line.length === 0) {
+                result.push(linePrefix.replace(/\s+$/, ""));
+            } else {
+                result.push(linePrefix + line);
+            }
+        }
+        lastWasBlockquote = false;
+    };
+
+    const appendText = (str) => {
+        if (str) textBuffer += str;
+    };
+
+    for (const child of node.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+            appendText(child.nodeValue);
+            continue;
+        }
+        if (child.nodeType !== Node.ELEMENT_NODE) continue;
+        if (child.classList && child.classList.contains("nested-quote-toggle-box")) {
+            continue;
+        }
+        if (child.tagName === "BLOCKQUOTE") {
+            flushText();
+            const nested = buildNestedQuoteLines(child, depth + 1);
+            result.push(...nested);
+            lastWasBlockquote = true;
+            continue;
+        }
+        if (child.tagName === "BR") {
+            appendText("\n");
+            continue;
+        }
+        // Pour les autres éléments (p, div, span, a, img, sticker...), on
+        // descend récursivement pour collecter leur texte tout en gérant
+        // d'éventuels <blockquote> ou <br> internes.
+        appendText(serializeInlineNode(child));
+    }
+    flushText();
+    return result;
+}
+
+function serializeInlineNode(node) {
+    // Sérialise un noeud "inline" en texte, en convertissant <br> en "\n" et
+    // en gérant les images sticker JVC (alt) et les liens.
+    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    if (node.tagName === "BR") return "\n";
+    if (node.tagName === "IMG") {
+        // Stickers/smileys : on prend l'alt (ex: ":noel:") ou l'URL pour les
+        // stickers noelshack.
+        const alt = node.getAttribute("alt") || "";
+        return alt;
+    }
+    let out = "";
+    for (const c of node.childNodes) out += serializeInlineNode(c);
+    // Pour les éléments de type bloc (p, div), on ajoute un saut de ligne final
+    // s'il n'y en a pas déjà, pour préserver la structure.
+    if ((node.tagName === "P" || node.tagName === "DIV") && out.length > 0 && !out.endsWith("\n")) {
+        out += "\n";
+    }
+    return out;
+}
+
 function buildQuoteEvent(messageId) {
     const message = document.querySelector(`.jvchat-message[jvchat-id='${messageId}']`);
     const quoteButton = message.querySelector('.jvchat-quote');
@@ -1776,10 +1880,14 @@ function buildQuoteEvent(messageId) {
             toggleTextarea();
         }
 
-        // Citation : on reconstruit un quote texte depuis le DOM JVChat
-        const quoteText = message.querySelector('.txt-msg')?.innerText.trim() || "";
-        let content = `\n> Le ${date} '''${author}''' a écrit :\n> `;
-        content += quoteText.split('\n').join('\n> ');
+        // Citation : on reconstruit le texte à partir du DOM JVChat en
+        // préservant l'imbrication des blockquotes (chaque niveau ajoute
+        // un "> ") et en récupérant les citations aplaties par JVC au-delà
+        // de sa profondeur d'imbrication maximale.
+        const txtMsg = message.querySelector('.txt-msg');
+        const quoteLines = txtMsg ? buildNestedQuoteLines(txtMsg, 1) : [];
+        let content = `\n> Le ${date} '''${author}''' a écrit :\n`;
+        content += quoteLines.join('\n');
         content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
         content += '\n\n';
 

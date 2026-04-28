@@ -14,9 +14,12 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.1 - 18/04/2026**
+### Dernière version : **0.2.2 - 28/04/2026**
 
 ## Changelog
+
+### 0.2.2 — 28/04/2026
+- Correction erreur lors de l'activation et correction des citations
 
 ### 0.2.1 — 18/04/2026
 - Correction des citations
