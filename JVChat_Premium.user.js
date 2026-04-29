@@ -262,9 +262,9 @@ function autoHideTurnstileErrorMessages() {
     });
 }
 
-function parseSondage(elem) {
+function parseSondage(elem, jsonRes) {
     // Old structure
-    let blocSondage = elem.getElementsByClassName("bloc-sondage")[0];
+    let blocSondage = elem?.getElementsByClassName("bloc-sondage")[0];
     if (blocSondage) {
         let intitule = blocSondage.getElementsByClassName("intitule-sondage")[0].textContent;
         let answered = !!(blocSondage.getElementsByClassName("result-pourcent")[0]);
@@ -294,7 +294,7 @@ function parseSondage(elem) {
 
     // New structure: extract from payload
     try {
-        let payload = freshPayload || getForumPayload(); //FreshPayload for actualize on polling
+        let payload = jsonRes || freshPayload || getForumPayload(); //FreshPayload for actualize on polling
         if (payload && payload.survey && payload.survey.hasSurvey && payload.survey.data) {
             let surveyData = payload.survey.data;
             let intitule = surveyData.title || "";
@@ -1976,17 +1976,9 @@ function submitSondageAnswer(event) {
                 return;
             }
 
-            setSondage({
-                answered: surveyData.hasVoted,
-                intitule: surveyData.title,
-                votes: surveyData.totalResponses,
-                results: surveyData.responses.map(r => ({
-                    response: r.text,
-                    pourcent: r.percentage,
-                    sondageId: surveyData.id,
-                    responseId: r.id
-                }))
-            });
+            let sondage = parseSondage(null, res);
+            setSondage(sondage);
+
         }
 
         function onError(err, _) {
