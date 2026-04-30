@@ -14,9 +14,15 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.2 - 28/04/2026**
+### Dernière version : **0.2.3 - 30/04/2026**
 
 ## Changelog
+
+### 0.2.3 — 30/04/2026
+- Détection automatique des blocs externes Deboucled/Décensured, RisiBank et du sondage natif du forum
+- Nouveau toggle inline (chevron en haut à droite du bloc) pour replier/déplier chaque bloc, avec persistance dans la configuration
+- Les 3 blocs sont masqués par défaut à l'activation de JVChat
+- Le bouton de toggle s'adapte automatiquement au thème clair/sombre du forum
 
 ### 0.2.2 — 28/04/2026
 - Correction erreur lors de l'activation et correction des citations

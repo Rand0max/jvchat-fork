@@ -172,6 +172,92 @@ body,
   display: none !important;
 }
 
+.jvchat-external-block {
+  position: relative;
+}
+
+.jvchat-external-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  width: 1.8rem;
+  height: 1.8rem;
+  justify-content: center;
+  border: 1px solid var(--jv-border-color, rgba(127, 127, 127, 0.35));
+  border-radius: 0.25rem;
+  background: var(--jv-input-bg-color, var(--jv-bg-color, transparent));
+  color: inherit;
+  opacity: 0.85;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.jvchat-external-toggle__chevron {
+  display: inline-block;
+  font-size: 2rem;
+  line-height: 1;
+}
+.jvchat-external-toggle__chevron::before {
+  content: "\25BE";
+  display: inline-block;
+  transition: transform 0.15s ease-in-out;
+}
+.jvchat-external-toggle.jvchat-external-toggle--collapsed .jvchat-external-toggle__chevron::before {
+  transform: rotate(-90deg);
+}
+
+.jvchat-external-toggle__title {
+  display: none;
+  color: inherit;
+  opacity: 0.75;
+}
+
+.jvchat-external-toggle:hover {
+  opacity: 1;
+}
+
+body.jvchat-hide-deboucled #deboucled-decensured-message-container > :not(.jvchat-external-toggle),
+body.jvchat-hide-risibank #risibank-container > :not(.jvchat-external-toggle),
+body.jvchat-hide-survey #forums-topic-survey > :not(.jvchat-external-toggle) {
+  display: none !important;
+}
+body.jvchat-hide-deboucled #deboucled-decensured-message-container,
+body.jvchat-hide-risibank #risibank-container,
+body.jvchat-hide-survey #forums-topic-survey {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+body.jvchat-hide-deboucled #deboucled-decensured-message-container .jvchat-external-toggle,
+body.jvchat-hide-risibank #risibank-container .jvchat-external-toggle,
+body.jvchat-hide-survey #forums-topic-survey .jvchat-external-toggle {
+  position: static;
+  width: 100%;
+  height: auto;
+  padding: 0.25rem 0.5rem;
+  justify-content: flex-start;
+  border-radius: 0;
+  box-shadow: none;
+}
+body.jvchat-hide-deboucled #deboucled-decensured-message-container .jvchat-external-toggle__title,
+body.jvchat-hide-risibank #risibank-container .jvchat-external-toggle__title,
+body.jvchat-hide-survey #forums-topic-survey .jvchat-external-toggle__title {
+  display: inline-block;
+}
+
 .jvchat-hide-visibility {
   visibility: hidden;
 }
