@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.3
+// @version      0.2.4
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -207,6 +207,10 @@ function manageTextareaSimpleHeight() {
 
     textarea.addEventListener('focus', function () {
         textarea.classList.toggle("jvchat-textarea-focus", true);
+        let toolbar = document.querySelector(".buttonsEditor, .jv-editor-toolbar");
+        if (toolbar) {
+            toolbar.classList.remove("jvchat-hide");
+        }
     });
 
     postButton.addEventListener('click', function () {
@@ -347,7 +351,7 @@ function toggleTextarea() {
     saveConfig();
 
     let isDown = isScrollDown();
-    //document.getElementById("bloc-formulaire-forum").getElementsByClassName("messageEditor__buttonEdit")[0]?.classList.toggle("jvchat-hide");
+    //document.querySelector(".messageEditor__buttonEdit").classList.toggle("jvchat-hide");
     document.getElementById("jvchat-enlarge")?.classList.toggle("jvchat-hide");
     document.getElementById("jvchat-reduce")?.classList.toggle("jvchat-hide");
     document.getElementById("jvchat-post")?.classList.toggle("jvchat-hide");

@@ -14,9 +14,12 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.3 - 30/04/2026**
+### Dernière version : **0.2.4 - 02/05/2026**
 
 ## Changelog
+
+### 0.2.4 — 02/05/2026
+- Réaffichage de la barre d'outils d'édition lors du focus
 
 ### 0.2.3 — 30/04/2026
 - Détection automatique des blocs externes Deboucled/Décensured, RisiBank et du sondage natif du forum
