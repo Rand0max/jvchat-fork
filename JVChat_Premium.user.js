@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         JVChat Premium FORK by Rand0max
+// @name         JVChat Premium FORK by Rand0max DEBUG
 // @description  Outil de discussion instantanée pour les forums de Jeuxvideo.com
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.4
+// @version      0.2.5
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -90,6 +90,7 @@ let refreshDegraded = false;
 let refreshDegradedTimeoutId = -1;
 let timeoutedDates = [];
 let sondageChoices = undefined;
+let surveyAjaxToken = undefined;
 let urlToFetch = undefined;
 let urlToRefreshInfos = undefined;
 let urlToCheckEdited = undefined;
@@ -114,9 +115,7 @@ function defaultConfig() {
         night_mode: false,
         load_images: false,
         hide_mosaic: false,
-        hide_deboucled: true,
         hide_risibank: true,
-        hide_survey: true,
         turbo_alerted: false,
         sound: "data:audio/mp3;base64, SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI3LjEwMgAAAAAAAAAAAAAA//uQwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAVAAAj6gAXFxcXIiIiIiIuLi4uLjo6Ojo6RUVFRVFRUVFRXV1dXV1oaGhoaHR0dHR/f39/f4uLi4uLl5eXl5eioqKirq6urq66urq6usXFxcXF0dHR0d3d3d3d6Ojo6Oj09PT09P////8AAAAATGF2YzU4LjUxAAAAAAAAAAAAAAAAJAYeAAAAAAAAI+ptpORkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQxAADk4YMnkEhl4L4QRnAkKWBAABvophhAsi/Z+qFd2/d6uJ0lh9XV7KPPMdJgaUaIgujxzFGPE2ktRjxMTdXafzC28Vcbwo49HSYm3ib//mKurj+JgaIQcgyDMRDNi9L0vfOvRuBajLZ43Tc3OpfNxlcpVn6zZnYGX17G2cbSHJsbni9huBKuNCwvyZzbROL6bBCmMSiP5MXwbM1+PvnK2dVn6zf7crHG5/f1on7+GLo95cEwwKGORk76jMgZR0gwgc35/kBJJRgjfGcBGBAjaY/LgmbxIEFRWTz65JBdui5ORgmSZOc/7Xd7nyMVituHKOKAYd/NcnrKFBiewUYXUFBinxRqR3qMKMdQUMYvs6tHvTBM3BG3y4Az8GFwTJ+u3/hBFv/qEme5IECCBACCIxepOI24UoSRC4/CEFDorbpAFAQJDfRpMeF6RrMo9pAupKGT678mgVJ/ygADLcECbamKEkCMA4G266kS6ogAAE6IOYiTB3hct+2Zn5mf37DhZ3bfsbXvn9nPxhyEQwPiPGsPKHktr41h5CYLHeO//uSxBiAWpYI6qMlhgsfQJ8UkydJz/FiwzXksn2WZt2wbiOT473mjZm+2vP7TBGSCwzGsMDBYrOCZ2OQvzy9/jh1eJZmeUHAmRTRu86vudv9swiWfsQn/sLDNf7FV8evkgwq/Pbe7b8z18Xxr7HB4sWcwYCOT7wLGV71HxzBujMIjM/M3KUWLFhgYGC/5bfOBIMHCoYcsocRMUJBgTDBxYsu/NFk9RxxhfHczMxDEc/Xzx2JZ+Zv0IIIRREywsymjLMljdU/60XWzDLlSC14oaEi6FAycKiUdQhsTk4sJl5Km0TcSUPFjtQSreVAGPChZAFsiLMOhR8RaqPIqT6SJEKcWCxAXJ1hpM4QJKtJE54NLEQy2nWLIi9U2uUtm5Mi8ZyGzxAQDsT725QkyqhRsng0rNGJ9w0gc+goygow8MQNwgSzklPWsIzKZRlNCRLE4VdFnEotKEiq7i0idygay2ER4WJ3NFSIujLui6pu3G0fal9afC2ZoUUKjIWYLoRzdUAAAdtpSljUoFR5tpa6VJceiiaHDKyryQtY1RaBIqHKCP/7ksQQgdjCDPikmTNDCcEfFpKQAbMWTEgjwookDhlpkMDi0ThgQQoUYMvTxCPIpgE8QtE+iKLJFCaiS1VcPj7oIJ1mKzmPH00MlFEbM0bI7PKWKxNGYJ56kmuwC4mXmpBsPHBE/TZKZgoda0PsIiRuyBhhD0MN9lhsgGl+F5oGnFyLHqRdYhkJh0hm1iCrUgZu7XP1B9HTSYJ8wII2TmTBoiHjR5VyN57mBimSWQ8YQCp74PyStZBpfQiPUwwo6J29FKqU5tm51Ml50i0jbJAqtNDvaWenZaLiyjVFVm4ymRLzQxQYhqDaqMqsVbiojXw5QqNIrg0JaYabfFVZCUQKnzkqiTMMGS1uJywzXkqjbe2Xb7/JFjEpL8rJAmhXQoQsnBah1z8ONl7KYomR0StnWab0jE1XhhRG66EiDQems0rU+WQkicIzbs1AUmyClUCGCbRAcWGpIiQqwzofM0sTsnjaSMrFlzTK6jiOKzxWxcbRpa5glRW0Zqmi6gBBDBEACALWUugs4tZMZIP8t+jGcU5EGdz1uIbn9Zh2zVgWEYb/+5LEEoAZei0VGbqAAy4iZKs7oAD4BmU5AbSaCkossWMiAGpiYCivAOCqbppug0DDoJAABgGEgEOTfZrLWJiFgwt7Aw2DQsrqv03d1EmTAjgPUFOBtRva5vtgMAACQDI4kBcZEzjaVfX06eHphaOLGZl4nBH5sXNuvUqv1LescZFzcnDE3LiEc8n+y6PrQTqq7VLqTpIkXJ9Avl83PZgThomlapdr6ft/9f7+tW//5mm7JsgjNkC4X3ZMzAAAAWAbmrqUSQAAMVRlNvVeMfhNPPjuMQluMzHVNFVoNDkZMSTSMBQXLhiQNGGQ3mU4lGAA0g4XDAcDTI4TjiCTXC29d8FGlNhGQIQoEFv2p2kTIoLYcFnAcTdqXkJYrJ3Nr/GhVFgqsW+AqwFXnOtaVONCuUD+khdnV6hYi5CYQyJOABicvrN3VRIiud/LF9W9VzDL+vqyafdL+fu1nj//j/+QB0cJXvmcipYZeFqOHN83j9LAvP7r//8ccsq3fv1b/2fgHBqPb//7qgAAAJBWQAAAADDJAdOccBowvjtzJ2QSML4X//uSxA0AGHTtFzntAAL5J+S3O1AAI5dhYzFfBjMEoF8KgBg4MMw6AxDAyA/MJQFkyHgazC0D4MRAKswIBCgMHUBFYYFLyp4qxxsKjELWfjSBcjM2GS26FprSHdvAiaPSLkqCxUWyTn3sxEBodWeOHGMsuujCLFNlrKZiu9/rOi5lrW7Pf3h39d/+7//7++c/3s1jvWu9uS3veb/LdYk+01yt1xNZEA0srFD4o/RSMTqzqn/+Q+Gb5HmneeUe/OgAAACwRggShMAAAAEAGNrBG1LlmNJYn755GQCQnXzmGC4dCoEmOYSo4mCQkm7SmBUGh4swwAwcXRi0XZouO4GCAYF9wFgARgGlD0BkwBGw8GJgPBfAw2DwMsDYAYSByAgCbOGRhzrhjELogYHBYIgGi6CMrnSBHzQDC4PAwOAQ48dYYjXfZE0WmziDwbXEDiUBKYzfr/5XIAQRgbHCWTr//8nEEDAgBUEEC1///8uFw0J8vn2Jsrmjf6/3wQghAAc1zBymsrBAAhYOnDowmajnJNAJXOSyc+coDERfPcFAmEp6gP/7ksQSgBnxJTT5zQADCJ3iw7/QAGgYfG+lOYsQQjHpksZBwhMUCExpA8DM8lcBGT6xmdlY4CBVYX2aVD0ASOTs5ZaUDB61JngKhoeHRKYEZSVOeKjDDsjCGQMVdd/Y3PSmB5VJtygVCAaKCp0lsPBLSEU61/WebEmzb/Fc0rTRMcLNENSJV7zdZNqf3zPXHGfrf3a0Aw9IgYFDDqsLWcL/43VsOzy5///vV3/pqbeXZJALQJVXluPP/+/Z5/yRYKgFZgMQFSYIsESmF7D1ZhTYWGYuyxYmKBhV5giwHOYFkA/goA0MB4AnDAXQDswOkA0AgEQYACA+mAXARZgRQASYBUBlmSA5n0hzmQIlmGQKmMAGmDwMqNICwSAAsBCUiGzZUvVyxi3X1HYym8YHg0VjOYdAWmbAUxWlkuf7v1cpbRdyrVfkFSMpGmEwHl2W9lt7f2P1g6Xb//+OOqtncGpWu9R/yrzv7z5//////vXcMqa1YoyQO6V/IPT+/5yr/7dyAEOGQxkBUzVMo9K5gxZkF2NAyJAjMCwUIDByBvkYmMD/+5LEEAAWsLUULv+CQ3qq6XW8vj7iYmQRn4ogkiiMZGTxga1Ixm+VH4i+HBQ1C3DaqGMehIxyNQEuGHUbT6URgmpbp5mZLZVOSR9l9A4ogABg4EtdcGXQdW13vf1e5y/T361NK11w67T9drzmFTv3LPKnf5vP+ct3aXIJXstY1DoXYoeTLtY8Ecag+evA7depy32yo0NisJLa5gsRUasPb/Fxf0NdBMjFMVQAKQJkUksbEuXnBRCMEAIZbbAoMQFjwOW7BwcYkEEwCWzUnDEMNbU0gld8LjEHOm18oDBIZhkmiiZYJomlAYEARpL/pwQ3L4hRV7copIMXRLWttff+N28IbcuAgIYbkhxKJAln0+1b1dtwXQ0lMNsCDj+piO6oHAy5HkaW67gJrr4TAaKXfZ0YBxsPG4gLJo2KWN3YnIog5BBBD0cK4SxJmW3MinRh/mWuDIXZc1coGp0p3ZIAUgxEWZbah7coIqvneRMZv9X3im6f3+M3pKxwjkdF/IWq0+q4TJK/tErVADlC2K3ggCkwexEjEKCdMrlb0yJgXzBD//uSxAwDF4FDKE9p6UsXKWKF/lE6B5MQQpA0qBFDrVwswNikEhZjBosQNDAAfY0R43a4iLAQWY4WQiAgsBAJI7McCMSlMcwOOUDBEVGYhRcjHPt6ynFGguLc9o+3CteK1k4Tr8kABUaI+mlfNNTqlucpWWErqMV3un1s1bVbAVzedMQBSAQi7xF5mnexdQmFli4jZr7Y3WuN1i41i+oBfkKfS7vXVvWtf/////////atcQlc5A0XJLtAAwAXEQBYAQIUwRENfMJ2BvzMkCgMxi0HLMGGBFjCvxag1hQCfAaVMzlsxAOwUHioAzH4KEJHMIoczWPU1Ep1xighBwNlCE8wknT2o0Gi8jSyZ1Xmlr4s1IQs/7hLzVNL3yyyLpwyTWkdIYOeBiUgyhZKTmCB0gIeqGbZmRMi8ZEqSKkkltZF3VompFRaQYCNVot1IPrZFmWyK2oVEOWtFrKky+rWvS0k6lKrV6nWjUyaJ1AqgKOI34wQdW8lev0QH6PyXkUh4ABQAELABpgCICKYDQNTmAJBBhiRqWAYaSDuGBlANxhMY//7ksQRgxgJAxJP7mnC+h3iCf29KBya04E2mwHhMSkSg5QIBTKhIqD51jSf2PKDqdO2IhNWlgSK5jiMa1MGCAaIXKCZ00aBhAFvJDLAR4Flkt1pJu6zhDgQ3BQJWYgI7TqJTCBAZpFM0M2OIjOjEWaKRc+dMWMkmqL6Q+AspMFKWnZ93tdFVq2sss+tHKW+jSuFzF6V2EjsKExCpZMNxz5PuAiZDNNiEKihvEECT1upMDrEGEQAABiEAkAICuYLsHkmFfgdJjNIqaYwsBAmBMgahgkJoGaSkGimoqhpQQY6aGBBIXFDDC8RDBFIGtmBMBPNExgNVIydIwxkAOcf0BjFndzSxG1CAfNLtuFpXSah9vzjeYdIb0BtR9JnzBrNwUUebNvrOF/Wc5zTyvYu3mswawCiFHuW+4WL/FPjecf0z//8YgDk0BxYFAY0VLLNNK0ix41GBUUSdm1A6sI3gUNJoSDw4a0JzrvvfY+/edrvtQQ5C237UsAQFxhfD8GOGFaYwjkZh8humBoDAYBThJpjDAntjAAeClRfFPomLIhGnAD/+5LEGIIR5V8ab2lJQimXI2ntrSjzimptsZ1R1UEIRuaFYnjUiQ4LJZCghwvyzt98qCIKZCIkG5A5MC8DSXLIrKYQliQs73NbPqTMa4F2Xtdb0/t9dD/kPXyb5h81qLRTmZbTX3c9G2yYbRSsXYGbCdCWgQDJEkUXeAABIBA8Kpahg7hLGWkWQZZIIBglAAGDAtSYD4b5wKMZMeo1IowMLECh4GKhINq2Lo6Ax5+JMvADAkp5dvkrx3XMiCWP9JrTMrQ4nANCAs4TiHmHDyCK0t22xjT/VXrz8VN/EnDOupZ7RMOkaFw4HNlRAbL2xrh31zqGXl8qV3i7f//+xREAIYC4FpgnA+GPicAZ2BExn/96GUkPwYXoU5jiTLm2KEeYh4FA8GgADAIAgEAMLTAHSdiNLkUljPSQBY1VfhX5kj+D0u9jZ26E0/u6OIuRBU9nxGbjqNIH1mOk3pyofR5LpZEXy3qInnZbt9KVJC1VV8dW6tSK/lKf6OWaktS9un1Omej9Mmn5eg7NzmIbnzXxyn5X9/b1qB8fFzokA1E/8j80//uSxFIDVSzjDA9pa4qhFqHN7bEpNu3lv/0gQgwDgDzApAaMFQGExczSTM8ENNT9lk1RAezDpAJMVBDk3OwBQ82MiFjJRYLAa7zOQAvMaABhBdDb0Q4hxkdmXtZBQtKpmN682IenWxUDayn8HdU4/PoozEkK5sxBbqnZ27tsn/3MvXstud2Ts8vhEc8JbZLEEO9Vfdb3hOted5oZ0Yv9H9dx398lx3b+bz4b+r6xIVKArPymZ/3J0v6Pd8I5/wN6tqfagAEAEjAFRgAhFmDYl6YIo1ZmSVYmQ6KuYFACRhiBdG3yEccYQSGGNKwq3hNBCsPpl4JqngksBtOp41KhZx2McK2HWcVodMxIeJhySqS8T0MA6xyDFHzIsLo0739X0MH3dVP8p2P5yGPtELNuz9ixz8V592fnk9scnZa+ti+rbezfkEce0380P8J/Wl+nAh/eL3Om8yJJf/96DfY1/ntiYCYAAOBBBQS5jEFnmYOFQaYzgBpmhgGEAD+YPiLRo9jGBZcyPTePRmIQDTVGQz1OKLVa2LuqgRe+28jSzBFmq//7ksRvg1Pcuw4vZQmKdxChgeyZOUvpr3H/sRr+9avTcxw/z/G7BaN4gcljCFoqjbj/WmNoFndqEZ1eUwfb/VPpO9kThpyDLLBUUd1yiRb1NwL7LUurG6E/7vanMq2lNjcfp+UIUZJ9r/+39Mf73fKITr1AAaAQYAAD5gHgxGHgWQZH4uRmezjGTYKQYNoPZgQKHGVsLcc6OYWAAAY0OVXNOaVvBUgvmEBX8oVFWd1Lr6GBBYZS6VwCWEJ4oE54eidU+raI7A16k5FhgkIX6kmOKv9Jf+2hbkdCXW8zxNLET8VdfNQtP3w3K2vHUT3w336cfqn19RtHMRU8Xr93z9rHxSU9tzP/U/0lfX58tXU1FM0X+/flWWaYPQMMoAwBQkAFUqG5gDAWGCea4YLgG5lmpumYMD2YJYDhgvlUGjwDIdpGYs1AbWmskTFEwFLRoEuKexJRKhUANcnhYjIIjYW0C5YjRMhCQVHVnNC0NHBADcwOQWiIMMciQa0r0nUbPcd60tUj1r8RF7f6d10+9fDfxrt2/UVzccV///9y8+3V/zf/+5LEl4IVOeUML2kJQpWs4intISiz8/TrWQPF0sINKowOZDRZ9KxaLudffCsg9ZacCbg2pipKlH4aAQMR8qAyHA7TMqkxMocTEwhggDD7ACNsAIswYgAAUDWkuW9SqBQEYKACGgVmSl+oFdtJVj0O5PSBgI2vQRLqVwYU04RhYPbMeIh4Sa5DCsYSS1ULjrt4dYrMdeGLeZlBftSL8qQM18g35z87f/IyQ9i8jOPefD4a8Y6+WUyMtpy825eJmr5QukXGqK0P3WUpFhFxk45l3oyYic9cfyztw0q2IqS+gpPtwEACJhMkHmLgDYZUSjxljg4GDMAoYQpN5m1BxkLhoYrfUCeNMpRU3wA4FQi9aYS40MXnQSmhuNV00ODy1dhYfBdnXwa17cGoNCMlb4pJkRG2G0NXc8Tz7/fVAspL6IjfehUzff3sNJemy/3Td/0p8NR4UuBz3UGjzXLa/Cel+k9FprVpavspVQvrB7FF+7/Xru0/zbc/iL9qVRAaCnMAANTAEQDMF4HozHXZjJQDSCApzACPxMC0QU/XDWKECy+Y//uSxLYCFOnNCg8gdMp3k+HZ7KUpbDMSwOHeNfQdYO0xu7Q568+YGNgl0XzmlCEcKzY0TjBxC00OsjMcSOtAnFjyWFSKfWLaFuadot6iZSMla/l6V4Sa+nv4pKr4xnm3afMNNxOu68dykmc/zdRVw7/dXW22lQkDNrh5+butfmEj9qqa+mpYT3rjn/T16W+u+L2h5y2EWZwQ2Bt/KszlJwGgOmFMK+YnYUpj0pPmRcD6GBJGCIUeZb4NYCBOSYLbQSp0WzeIiA5TWGgCIhLHhRLh9/nhEgCoenc0E0gNNt20hBkQl6LE6LzQqUSWHnqCkiVgigOtFi1gcjCyAmd672PWTSDXjSwjzs+sZmZB/yC+jZLCp6SEkSQkOczJORT+wvH/dlNYq6s5shYlAzkGNTyUREJaKUBGAox960rVLow2pVrQVetAulVwCYAIIARMEcDIxfD2jM/DVNKiU0zgRBwMGIYcBT5vTgVGCeBEYCYDJgIgLkwCJMBEBhhAkc5ZnGAJt23TZClnLIw7gCQzkT9UchtNd7Kam5hnLcpyOauYUf/7ksTZghVV9QovZQlKurMh5eSOmNHlW1c9+rFLS0TU+ZT9avfsSRNlG3xJVuop3dtdlske9SyUy9z3JGWci9THPKSkpVKaXrfTbzjNLdMqdQ1INDfDUGxuX2jla5T59nzZJmdmYoxBsJOPvFV4vWY6CkNZ4deRBymeS9VEKJMrJPfPsGsq8S1E1HP3zvOt/rtaTJgBgGGAABWCQgDA5SIMD8VIywnbjMzDwMDgHMwmh5jTxDyKGZqH4QBus4IpD1HJAByEaBMreJ20a7DssjLAGJv1S4T3u9hD2VeORON41cd6XusEwbmwmS1KQaVB/00sVdpl96Z0k57Vcu2EDkbbSOQad6eptBOIIeWzbKCb3O0/Kt4w1v2t8N/p0WdLIxWs31O8jMzX1o/JJGdeTvf60s265THrkpFpPRw/5M7kbpVmthF32oxqu2/qyryZQl/TvHVzzSLgG8AQB5gcAVGKiOgZOgchmctXGXUG4YN4M5hKGsGLqIwZxiYOAPOXnSlGhY4PLgOWwhtZQztQqpIswMWtvBu5rbJZVKBOouC4CyD/+5LE8wNa5gcCL2TNyw8/oIHtGTlDLoOzxrPZxATjDTBDGmj0GCIELDmMtnskY+9Yqi6kKp58W41Zva0lxl2YNiyaUmRxkshX4+8fB9XlwiajbeTZWtftGrNySddWiESR7rnQplcwNtc6HsfwmZUz2nM6jsQWlGFrjI7WKaDB5GKI9PfD+PGZy1cRJKsPlrRgBADmAaAsYEQKJhqlNmQUIGZUbTZljBtmBmAwYHpaBlcBbHUWmfOAoE1pDmSCkZQ7Sn29ctjzXEY5G72Y0RkmLblAmA0pzpZAEOfEHjY+nWdtagkujPqXulpt6am3ZPnaY2/cIopyS/xFCq6m8y2wuG6zLh6Pt5zkojEGJtF5NuWon9Kzx7EdFzDkDUTJqu6lwtuoupnq/PfIq3jHTf7m/vG6i/bHhr3Ma5d3q6b67lPzpD5JxScGut9iILwco0lqGEAGMgwBQwCQUzCIMzMJUPMzClfzKHC3MGwGAwdxBDOgAfOUIBytaKm0RBxURCEd4TF4XLIix5r9tu6AfOpC/osYBzs1ZPSQiHeyefEAJxKB//uSxOwDWL4DBC9pCYsBvyCB7RkpNjgWIhjiXPKNxE0FoMFggb7RQSfRIRwRPY95ma73bLaHkykULSov9FrxM9BOolmtpa0ln3klQ5tzCWRTordrjTms3mM6opJjJjbLdSDGfwfb/Hy3K3C/UQe7FalDTldCJzNef6lpbPtQ8zrP3bctnc0DqMZkzFUxwAgACQBoQB8YcAlZjhhNGPwxUZI4TBgsAEGEOLSZdQR5kIdPiXV2teFrszG5MERpmYVC3O07LoKJV37v34zK2tcub3EI3HLGGPJA1mOtfE3aHEV5A8XR1FpPNw7wje9924svlrhH5W53NTtb403b5JHcNK2X8NB27EFpXjZzD67xq3P3d3XeS0osxHJfRLsXZSBrlTuX/b5tDmxnrdQMcvdVuyWjkTnWvXKNaUX0Xlod0mu9jcyX9LgzO2PByKFJVQJACzwgANGQNjB4IwMT0LQy400jKACWME8AsRFdmD4HCJlGMomoEEP2gkGSVSMqa80pvnKS6vRdnQcbZdCHqahrP7Nbq1s5HNTurYY/wS6J6iIurP/7ksTvA1keBQRPaMnLB8AghewZOTHvZpaTHuiTP+mnmsROK2To2qrdLjWhrX5RvG009VWZBbdGV2VLY/a0ZNwpe6iPUhRrgZqR/swg1kKiHJS6NF5Ocy2aCxefCtnJZmaWOQsCbavJw5EK7F7SEl6UtD09D0FySMlSr8a0uUU5/j5hsmputye9BkbN1tWC0hcQMAwxtYgw3J00F6MDcCYYh6YmvCbgjSYjginkJANDsMIGuyPASKUXNRuKwdTHO2le3x7Q4tG6jNJBa9HbBhzz6vqlr0s2TxW+7xjdO4UumTNtQPTP9f7Rtf/Wc0zq18596/OfD1n5pjf+NRc4zjFcbiZ1m2Mw9TZxiF6XxL8XtvN4Ftazm9vf/frS1sUrjWK0+bY3Xfvv2xHpj7197zS2sbpee/1qNq2bZzjOa5z81zNuX2vquMfesbpe/trGqZpjH3uWAAQAUJMQAMBsWgwFqMzB9CpM4dgcwGhbTNCBgM7dY8z0QNTZHT7BUixtgoCmouAUYFAKRgFgkgAAAwDgEUwzANAcO7iEwCq2xRphqHb/+5LE8ANZagcCL2TJyx5A4Qq68AAeWrgECDBsRQRFlWmMhqPipymMrcKySaexxFHmJy6WQVYfh3HKj8Ds6dVgTNHXdeIySliMCNe+blbXqd/KVw3mi8y+dR96ZqUCzETltPekMMPC0WF00m5G8qsjp5dIKZ+4/J4hhPMbxk9uZlkvh6/jLtS6T9noZlleNzM1apGt+7CwkdfONPpLpNT0rivtF6d5JRejlihnmuTMIf3OWsl7KKKapZHQ3IBmnFlUchyHaOIzN+Syuo2SUVYPlNqCn+n4xG78SrR1lD/QTSyWlcKHJychjdSVSWMwDAM3EY7Rf/////4vzXlEEQJGHKsO7LsZ6U2J2PwPQf/////wNDUARKBH5g6tXeyKSKCcnRpY3DcYAAEAAAMEoLwyQhqjAOAaMLkNqt00SR7TGnEwMCcLkwGAN/0YLQF4kEeYBQBxgMgDf5zDxADC4wy5TXmbBm6JJimNECMEY0V/+ZUKbI8RFS75hwiwRgQhhQ3//mSGBgiSmIDAYQ8RaowYaYQy///4FAgIFCFcICDBAACE//uSxO0AK+Iu+xnsAAT7PuBXPaAAsrSBICGWxf///q8USLIIaMqLIIUF1n1hhHpwYQrd////69i6hehbyJiOCcatiVjSXVaU3Fpsebiy2x/////+jW3RSxAe2JliKcPPIim67osRh10V2u7ALDWcx1hv///////DiG7T48oOzeXsjTHhtmap3fdFMdYWZaysLddlhtaIrlpqFlMSp//////////3Hh1Qdf8HMPUvasytPttG5svXpBLO1LJlr//////7WYlRuzEotEYCfqZiTvX4k5UPRJynekxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqv/7ksQ5A8AAAaQcAAAgAAA0gAAABKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo="
     };
@@ -269,8 +268,33 @@ function autoHideTurnstileErrorMessages() {
     });
 }
 
-function parseSondage(elem) {
-    // Old structure
+function parseSondage(elem, payload) {
+    // Priority: extract from payload (most reliable, always has percentages and vote count)
+    try {
+        let p = payload || freshPayload || getForumPayload();
+        if (p && p.survey && p.survey.hasSurvey && p.survey.data) {
+            if (p.survey.ajaxToken) {
+                surveyAjaxToken = p.survey.ajaxToken;
+            }
+            let surveyData = p.survey.data;
+            let intitule = surveyData.title || "";
+            let answered = surveyData.hasVoted || false;
+            let results = [];
+            let responses = surveyData.responses || surveyData.answers || [];
+            for (let r of responses) {
+                results.push({
+                    response: r.text || r.label || "",
+                    pourcent: r.percentage || 0,
+                    sondageId: surveyData.id,
+                    responseId: r.id
+                });
+            }
+            let votes = surveyData.totalResponses || surveyData.totalVotes || 0;
+            return { answered: answered, intitule: intitule, results: results, votes: votes };
+        }
+    } catch { /* ignore */ }
+
+    // Fallback: Old DOM structure
     let blocSondage = elem.getElementsByClassName("bloc-sondage")[0];
     if (blocSondage) {
         let intitule = blocSondage.getElementsByClassName("intitule-sondage")[0].textContent;
@@ -299,28 +323,40 @@ function parseSondage(elem) {
         return { answered: answered, intitule: intitule, results: results, votes: votes };
     }
 
-    // New structure: extract from payload
-    try {
-        let payload = getForumPayload();
-        if (payload && payload.survey && payload.survey.hasSurvey && payload.survey.data) {
-            let surveyData = payload.survey.data;
-            let intitule = surveyData.title || "";
-            let answered = surveyData.hasVoted || false;
-            let results = [];
-            if (surveyData.answers) {
-                for (let answer of surveyData.answers) {
-                    results.push({
-                        response: answer.label || "",
-                        pourcent: answer.percentage || 0,
-                        sondageId: surveyData.id,
-                        responseId: answer.id
-                    });
-                }
+    // Fallback: New DOM structure (#forums-topic-survey > .surveyResults)
+    let surveyBlock = elem.querySelector ? elem.querySelector("#forums-topic-survey .surveyResults, .surveyResults") : null;
+    if (!surveyBlock && elem.getElementById) {
+        let container = elem.getElementById("forums-topic-survey");
+        if (container) surveyBlock = container.querySelector(".surveyResults");
+    }
+    if (surveyBlock) {
+        let titleEl = surveyBlock.querySelector(".surveyResults__title");
+        let intitule = titleEl ? titleEl.textContent.trim() : "";
+        let results = [];
+        let answered = false;
+
+        let resultItems = surveyBlock.querySelectorAll(".surveyResults__resultItem");
+        if (resultItems.length > 0) {
+            answered = true;
+            for (let item of resultItems) {
+                let textEl = item.querySelector(".surveyResults__resultText");
+                let pctEl = item.querySelector(".surveyResults__percentage");
+                let response = textEl ? textEl.textContent.trim() : "";
+                let pourcent = pctEl ? parseInt(pctEl.textContent) || 0 : 0;
+                results.push({ response: response, pourcent: pourcent });
             }
-            let votes = surveyData.totalVotes || 0;
-            return { answered: answered, intitule: intitule, results: results, votes: votes };
+        } else {
+            let choixItems = surveyBlock.querySelectorAll(".surveyResults__result");
+            for (let item of choixItems) {
+                let response = item.textContent.trim();
+                results.push({ response: response, pourcent: 0, sondageId: null, responseId: null });
+            }
         }
-    } catch { /* ignore */ }
+
+        let countEl = surveyBlock.querySelector(".surveyResults__count");
+        let votes = countEl ? parseInt(countEl.textContent) || 0 : 0;
+        return { answered: answered, intitule: intitule, results: results, votes: votes };
+    }
 
     return null;
 }
@@ -811,26 +847,12 @@ function getPanelHtml() {
                         </label>
                         <p>Cache automatiquement les mosaïques d'images NoelShack pour réduire le flooding.</p>
                     </div>
-                    <div class="jvchat-config-option jvchat-hide" id="jvchat-hide-deboucled">
-                        <label>
-                            <input id="jvchat-hide-deboucled-checkbox" type="checkbox">
-                            <span id="jvchat-hide-deboucled-span">Masquer le bloc Deboucled</span>
-                        </label>
-                        <p>Masque le bloc des messages filtrés ajouté par le userscript Deboucled / Décensured pour gagner de la place verticale.</p>
-                    </div>
                     <div class="jvchat-config-option jvchat-hide" id="jvchat-hide-risibank">
                         <label>
                             <input id="jvchat-hide-risibank-checkbox" type="checkbox">
                             <span id="jvchat-hide-risibank-span">Masquer le bloc RisiBank</span>
                         </label>
                         <p>Masque le panneau d'images ajouté par le userscript RisiBank pour gagner de la place verticale.</p>
-                    </div>
-                    <div class="jvchat-config-option jvchat-hide" id="jvchat-hide-survey">
-                        <label>
-                            <input id="jvchat-hide-survey-checkbox" type="checkbox">
-                            <span id="jvchat-hide-survey-span">Masquer le sondage</span>
-                        </label>
-                        <p>Masque le bloc sondage natif du forum pour gagner de la place verticale.</p>
                     </div>
                     <div class="jvchat-config-option" id="jvchat-turbo-delay">
                         <label>
@@ -964,22 +986,10 @@ function clearPage(document) {
         document.getElementById("jvchat-main").classList.add("jvchat-hide-mosaics");
     }
 
-    document.getElementById("jvchat-hide-deboucled-checkbox").checked = configuration["hide_deboucled"];
-    document.getElementById("jvchat-hide-deboucled-checkbox").addEventListener("change", tryCatch(toggleHideDeboucledOption));
-    if (configuration["hide_deboucled"]) {
-        document.body.classList.add("jvchat-hide-deboucled");
-    }
-
     document.getElementById("jvchat-hide-risibank-checkbox").checked = configuration["hide_risibank"];
     document.getElementById("jvchat-hide-risibank-checkbox").addEventListener("change", tryCatch(toggleHideRisibankOption));
     if (configuration["hide_risibank"]) {
         document.body.classList.add("jvchat-hide-risibank");
-    }
-
-    document.getElementById("jvchat-hide-survey-checkbox").checked = configuration["hide_survey"];
-    document.getElementById("jvchat-hide-survey-checkbox").addEventListener("change", tryCatch(toggleHideSurveyOption));
-    if (configuration["hide_survey"]) {
-        document.body.classList.add("jvchat-hide-survey");
     }
 
     watchExternalBlocks();
@@ -1124,30 +1134,12 @@ function toggleHideMosaicOption(event) {
     }
 }
 
-function toggleHideDeboucledOption(event) {
-    let checked = document.getElementById("jvchat-hide-deboucled-checkbox").checked;
-    setExternalBlockHidden("deboucled", checked);
-}
-
 function toggleHideRisibankOption(event) {
     let checked = document.getElementById("jvchat-hide-risibank-checkbox").checked;
     setExternalBlockHidden("risibank", checked);
 }
 
-function toggleHideSurveyOption(event) {
-    let checked = document.getElementById("jvchat-hide-survey-checkbox").checked;
-    setExternalBlockHidden("survey", checked);
-}
-
 const externalBlocks = {
-    deboucled: {
-        configKey: "hide_deboucled",
-        blockId: "deboucled-decensured-message-container",
-        optionId: "jvchat-hide-deboucled",
-        checkboxId: "jvchat-hide-deboucled-checkbox",
-        bodyClass: "jvchat-hide-deboucled",
-        label: "Deboucled",
-    },
     risibank: {
         configKey: "hide_risibank",
         blockId: "risibank-container",
@@ -1155,14 +1147,6 @@ const externalBlocks = {
         checkboxId: "jvchat-hide-risibank-checkbox",
         bodyClass: "jvchat-hide-risibank",
         label: "RisiBank",
-    },
-    survey: {
-        configKey: "hide_survey",
-        blockId: "forums-topic-survey",
-        optionId: "jvchat-hide-survey",
-        checkboxId: "jvchat-hide-survey-checkbox",
-        bodyClass: "jvchat-hide-survey",
-        label: "Sondage",
     },
 };
 
@@ -1229,7 +1213,8 @@ function watchExternalBlocks() {
         let allFound = true;
         for (let key in externalBlocks) {
             let def = externalBlocks[key];
-            if (document.getElementById(def.blockId)) {
+            let block = document.getElementById(def.blockId);
+            if (block) {
                 let opt = document.getElementById(def.optionId);
                 if (opt) {
                     opt.classList.remove("jvchat-hide");
@@ -2206,36 +2191,67 @@ function submitSondageAnswer(event) {
         let sondageId = sondageChoices[reponseNum]["sondageId"];
         let reponseId = sondageChoices[reponseNum]["responseId"];
         let topicId = urlToFetch["ids"].split("-")[2];
-        let url = `https://www.jeuxvideo.com/forums/ajax_topic_sondage_vote.php?id_topic=${topicId}&id_sondage_reponse=${reponseId}&id_sondage=${sondageId}&ajax_hash=${freshHash}`;
 
-        function onSuccess(res) {
-            if (res.erreur.length > 0) {
+        let hash = surveyAjaxToken || freshHash;
+        let body = `ajax_hash=${encodeURIComponent(hash)}&id_topic=${encodeURIComponent(topicId)}&id_sondage=${encodeURIComponent(sondageId)}&id_sondage_reponse=${encodeURIComponent(reponseId)}`;
+
+        fetch("https://www.jeuxvideo.com/forums/survey/vote", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+                "x-requested-with": "XMLHttpRequest",
+                "Accept": "application/json"
+            },
+            body: body
+        }).then(function(response) {
+            if (!response.ok) {
+                addAlertbox("danger", `Erreur lors du vote (${response.status})`);
+                return;
+            }
+            return response.json();
+        }).then(function(res) {
+            if (!res) return;
+            if (res.erreur && res.erreur.length > 0) {
                 for (let err of res.erreur) {
                     addAlertbox("danger", err);
                 }
                 return;
             }
-            let dom = document.createElement("html");
-            dom.innerHTML = res["html"];
-
-            let sondage = parseSondage(dom);
-            if (!sondage) {
-                addAlertbox("warning", "Erreur lors de la récupération du sondage");
-                return;
+            // Response contains updated survey data
+            if (res.survey || res.data) {
+                let surveyData = res.survey ? res.survey.data || res.survey : res.data;
+                let sondage = {
+                    answered: true,
+                    intitule: surveyData.title || document.getElementById("jvchat-sondage-intitule").textContent,
+                    results: (surveyData.responses || []).map(function(r) {
+                        return { response: r.text || "", pourcent: r.percentage || 0, sondageId: surveyData.id, responseId: r.id };
+                    }),
+                    votes: surveyData.totalResponses || 0
+                };
+                setSondage(sondage);
+            } else if (res.html) {
+                // Legacy: response contains HTML
+                let dom = document.createElement("html");
+                dom.innerHTML = res.html;
+                let sondage = parseSondage(dom);
+                if (sondage) {
+                    setSondage(sondage);
+                } else {
+                    addAlertbox("warning", "Erreur lors de la récupération du sondage");
+                }
+            } else {
+                // Minimal fallback: mark as answered
+                addAlertbox("success", "Vote enregistré");
+                let currentSondage = parseSondage(document);
+                if (currentSondage) {
+                    currentSondage.answered = true;
+                    setSondage(currentSondage);
+                }
             }
-
-            setSondage(sondage);
-        }
-
-        function onError(err, _) {
-            addAlertbox("danger", err);
-        }
-
-        function onTimeout(err) {
-            addAlertbox("warning", err);
-        }
-
-        request("POST", url, onSuccess, onError, onTimeout, undefined, true, 5000, false);
+        }).catch(function(err) {
+            addAlertbox("danger", "Erreur réseau lors du vote");
+        });
     }
 }
 
@@ -2263,7 +2279,8 @@ function setSondage(sondage) {
         }
     } else {
         let trs = choix.getElementsByClassName("result-pourcent");
-        for (let i = 0; i < trs.length; i++) {
+        let len = Math.min(trs.length, sondage["results"].length);
+        for (let i = 0; i < len; i++) {
             let res = sondage["results"][i];
             let tr = trs[i];
             tr.getElementsByClassName("pourcent")[0].innerHTML = `${res["pourcent"]} %`;
@@ -2802,7 +2819,7 @@ function parsePage(res, requestTimestamp) {
         isAlert = isAlert_;
     }
 
-    let sondage = parseSondage(res);
+    let sondage = parseSondage(res, payload);
     if (sondage) {
         setSondage(sondage);
     }
