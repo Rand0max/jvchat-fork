@@ -14,9 +14,12 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.5 - 05/05/2026**
+### Dernière version : **0.2.6 - 07/05/2026**
 
 ## Changelog
+
+### 0.2.6 — 07/05/2026
+- Correction affichage des images larges
 
 ### 0.2.5 — 05/05/2026
 - Correction de la gestion des sondages

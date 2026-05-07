@@ -837,6 +837,21 @@ hr.jvchat-ruler:first-of-type {
   object-fit: contain;
 }
 
+.jvchat-content .message__urlImgLarge {
+  width: 300px;
+  height: 170px;
+  max-width: 100%;
+  padding-bottom: 0 !important;
+  background-color: transparent;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: left center;
+  object-fit: contain;
+  overflow: visible;
+  border-radius: 0.5rem;
+  display: inline-block;
+}
+
 .jvchat-content .img-stickers,
 .jvchat-content .message__urlImgSticker {
   max-height: 39px;

@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.5
+// @version      0.2.6
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -663,6 +663,19 @@ function fixMessage(elem) {
         a.setAttribute("href", jvCake(jvcare.getAttribute("class")));
         a.innerHTML = jvcare.innerHTML;
         jvcare.outerHTML = a.outerHTML;
+    }
+    // Activate lazy-loaded images that JVC's JS would normally handle
+    let lazyBgImages = Array.from(elem.querySelectorAll(".js-lazy[data-src-background]"));
+    for (let lazy of lazyBgImages) {
+        let src = lazy.getAttribute("data-src-background");
+        if (!src) continue;
+        lazy.style.backgroundImage = `url("${src}")`;
+    }
+    let lazyImgElements = Array.from(elem.querySelectorAll("img.js-lazy[data-src]"));
+    for (let lazy of lazyImgElements) {
+        let src = lazy.getAttribute("data-src");
+        if (!src) continue;
+        lazy.setAttribute("src", src);
     }
     // New structure: blockquote.message__blockquote > blockquote.message__blockquote
     let togglableQuotes = Array.from(elem.querySelectorAll("blockquote > blockquote"));
@@ -2690,6 +2703,13 @@ function decreaseUpdateInterval() {
 }
 
 function getPayload(doc) {
+    // Fast path: if doc is the live document, reuse getForumPayload()
+    if (doc === document) {
+        try {
+            return getForumPayload();
+        } catch { /* fall through to script parsing */ }
+    }
+
     const scripts = doc.getElementsByTagName('script');
     let rawPayloadString = null;
 
