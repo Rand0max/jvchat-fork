@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.6
+// @version      0.2.7
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -148,7 +148,12 @@ function escapeHtml(str, isAttribute) {
 }
 
 function getForm(doc) {
-    return doc.querySelector('#forums-post-message-editor > form');
+    let form = doc.querySelector('#bloc-formulaire-forum > form');
+    if (!form) {
+        const forms = document.querySelectorAll('form');
+        form = forms[forms.length - 1]; // fallback to last form on the page
+    }
+    return form;
 }
 
 function getHash(doc) {
@@ -2217,13 +2222,13 @@ function submitSondageAnswer(event) {
                 "Accept": "application/json"
             },
             body: body
-        }).then(function(response) {
+        }).then(function (response) {
             if (!response.ok) {
                 addAlertbox("danger", `Erreur lors du vote (${response.status})`);
                 return;
             }
             return response.json();
-        }).then(function(res) {
+        }).then(function (res) {
             if (!res) return;
             if (res.erreur && res.erreur.length > 0) {
                 for (let err of res.erreur) {
@@ -2237,7 +2242,7 @@ function submitSondageAnswer(event) {
                 let sondage = {
                     answered: true,
                     intitule: surveyData.title || document.getElementById("jvchat-sondage-intitule").textContent,
-                    results: (surveyData.responses || []).map(function(r) {
+                    results: (surveyData.responses || []).map(function (r) {
                         return { response: r.text || "", pourcent: r.percentage || 0, sondageId: surveyData.id, responseId: r.id };
                     }),
                     votes: surveyData.totalResponses || 0
@@ -2262,7 +2267,7 @@ function submitSondageAnswer(event) {
                     setSondage(currentSondage);
                 }
             }
-        }).catch(function(err) {
+        }).catch(function (err) {
             addAlertbox("danger", "Erreur réseau lors du vote");
         });
     }
