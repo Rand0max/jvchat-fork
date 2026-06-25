@@ -14,9 +14,14 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.7 - 26/05/2026**
+### Dernière version : **0.2.8 - 25/06/2026**
 
 ## Changelog
+
+### 0.2.8 — 25/06/2026
+- Support du nouveau payload JVC
+- Post, édition et vote au sondage reconstruits depuis le payload (fallback DOM conservé)
+- Citation enrichie (gras, italique, listes, spoils, code, youtube, liens, stickers)
 
 ### 0.2.7 — 26/05/2026
 - Correction de la recherche du formulaire pour le post

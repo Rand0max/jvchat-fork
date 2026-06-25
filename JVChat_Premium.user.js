@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.7
+// @version      0.2.8
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -12,6 +12,7 @@
 // @grant        GM.getResourceText
 // @grant        GM_getResourceText
 // @grant        GM_addStyle
+// @require      https://cdn.jsdelivr.net/npm/fflate/umd/index.js
 // @resource     JVCHAT_CSS https://raw.githubusercontent.com/Rand0max/jvchat-fork/refs/heads/master/jvchat-premium.css
 // @downloadURL  https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
 // @updateURL    https://github.com/Rand0max/jvchat-fork/raw/refs/heads/master/JVChat_Premium.user.js
@@ -1332,8 +1333,39 @@ function getForumId() {
     return forumId;
 }
 
+function decodeForumPayloadString(raw) {
+    if (!raw) return undefined;
+    // Depuis le 11 juin 2026, jvc.forumsAppPayload est en base64(gzip(JSON)).
+    // Info : www.jeuxvideo.com/forums/message/1300105844
+    // On utilise fflate (gunzipSync) car DecompressionStream natif est asynchrone,
+    // incompatible avec l'usage synchrone du payload dans le reste du script.
+    try {
+        const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+        const json = fflate.strFromU8(fflate.gunzipSync(bytes));
+        return JSON.parse(json);
+    } catch {
+        // Fallback ancien format : base64(JSON)
+        try {
+            return JSON.parse(atob(raw));
+        } catch {
+            return undefined;
+        }
+    }
+}
+
 function getForumPayload() {
-    return JSON.parse(atob(unsafeWindow.jvc.forumsAppPayload));
+    return decodeForumPayloadString(unsafeWindow.jvc.forumsAppPayload);
+}
+
+// Retourne le payload courant sans jamais lever d'exception (freshPayload en
+// priorité, sinon extraction depuis la variable globale jvc.forumsAppPayload).
+function getActivePayload() {
+    if (freshPayload) return freshPayload;
+    try {
+        return getForumPayload();
+    } catch {
+        return undefined;
+    }
 }
 
 function getTextArea() {
@@ -1373,8 +1405,14 @@ function handleApiResponseError(response, operation = "[N/A]") {
 
 
 async function postJvcMessage() {
-    if (!freshForm) {
-        addAlertbox("danger", "Impossible de poster le message, aucun formulaire trouvé");
+    const payload = getActivePayload();
+    // Approche payload (primaire) : tout est reconstruit depuis le payload JVC,
+    // sans dépendre du <form> DOM que JVC retire progressivement.
+    const canUsePayload = !!(payload && payload.formSession && payload.ajaxToken
+        && payload.topicId !== undefined && payload.forumId !== undefined);
+
+    if (!canUsePayload && !freshForm) {
+        addAlertbox("danger", "Impossible de poster le message, aucun payload ni formulaire trouvé");
         return;
     }
 
@@ -1384,30 +1422,49 @@ async function postJvcMessage() {
     formulaire.classList.add("jvchat-disabled-form");
     textarea.setAttribute("disabled", "true");
 
-    let formData = new FormData(freshForm);
+    let formData;
 
-    formData.set("text", textarea.value);
-    formData.set("topicId", getTopicId());
-    formData.set("forumId", getForumId());
-    formData.set("group", "1");
-    formData.set("messageId", "undefined");
-
-    const forumPayload = freshPayload || getForumPayload();
-    const formSessionData = forumPayload.formSession;
-
-    for (const key in formSessionData) {
-        if (Object.hasOwnProperty.call(formSessionData, key)) {
-            formData.append(key, formSessionData[key]);
+    if (canUsePayload) {
+        // ----- Approche payload (primaire) -----
+        formData = new FormData();
+        formData.set("text", textarea.value);
+        formData.set("topicId", payload.topicId);
+        formData.set("forumId", payload.forumId);
+        let aliasRang = document.getElementById('form_alias_rang');
+        formData.set("group", aliasRang?.value || "1");
+        formData.set("messageId", "undefined");
+        const formSession = payload.formSession;
+        for (const key in formSession) {
+            if (Object.hasOwnProperty.call(formSession, key)) {
+                formData.append(key, formSession[key]);
+            }
         }
-    }
+        formData.set("ajax_hash", payload.ajaxToken);
+    } else {
+        // ----- Fallback : construction depuis le <form> DOM (ancienne approche) -----
+        formData = new FormData(freshForm);
+        formData.set("text", textarea.value);
+        formData.set("topicId", getTopicId());
+        formData.set("forumId", getForumId());
+        formData.set("group", "1");
+        formData.set("messageId", "undefined");
 
-    let fs_custom_input = Array.from(freshForm.elements).find(e => /^fs_[a-f0-9]{40}$/i.test(e.name));
-    if (fs_custom_input && !formData.has(fs_custom_input.name)) {
-        formData.set(fs_custom_input.name, fs_custom_input.value);
-    }
-    if (!formData.has("ajax_hash")) {
-        let ajax_hash = freshForm.querySelector('input[name="ajax_hash"]')?.value || freshHash;
-        formData.set("ajax_hash", ajax_hash);
+        const forumPayload = payload || getActivePayload();
+        const formSessionData = forumPayload && forumPayload.formSession;
+        for (const key in formSessionData) {
+            if (Object.hasOwnProperty.call(formSessionData, key)) {
+                formData.append(key, formSessionData[key]);
+            }
+        }
+
+        let fs_custom_input = Array.from(freshForm.elements).find(e => /^fs_[a-f0-9]{40}$/i.test(e.name));
+        if (fs_custom_input && !formData.has(fs_custom_input.name)) {
+            formData.set(fs_custom_input.name, fs_custom_input.value);
+        }
+        if (!formData.has("ajax_hash")) {
+            let ajax_hash = freshForm.querySelector('input[name="ajax_hash"]')?.value || freshHash;
+            formData.set("ajax_hash", ajax_hash);
+        }
     }
 
     const boundary = "----geckoformboundary" + Math.random().toString(16).slice(2);
@@ -1449,7 +1506,13 @@ async function postJvcMessage() {
         formulaire.classList.remove("jvchat-disabled-form");
         textarea.removeAttribute("disabled");
 
-        if (handleApiResponseError(res, 'l\'envoi du message')) return;
+        if (handleApiResponseError(res, 'l\'envoi du message')) {
+            // Renouvellement du CRPS (form-session) si JVC en renvoie un nouveau
+            if (res && res.formSession && freshPayload) {
+                freshPayload.formSession = res.formSession;
+            }
+            return;
+        }
 
         let messageId = res?.messageId || res?.id || null;
         if (!messageId && response.url) {
@@ -1510,17 +1573,20 @@ async function requestMessageDataForEdit(messageId, messageBloc) {
             messageBloc.originalHTML = originalContentDiv.innerHTML;
         }
 
-        // The new endpoint returns all fields at the top level. Extract the
-        // JVCode (message body) and every `fs_*` field (form-session anti-CSRF
-        // tokens) which must be re-sent verbatim in the POST body.
+        // Récupère le JVCode (corps du message) et la form-session (jetons
+        // anti-CSRF / CRPS) à renvoyer telle quelle dans le POST d'édition.
+        // JVC renvoie généralement un objet `formSession`, mais on couvre aussi
+        // les variantes (clés `fs_*` à la racine, ou `edit_form_session`).
         const jvcode = data.jvcode || data.text || data.message || "";
         const formSession = {};
+        if (data.formSession && typeof data.formSession === "object") {
+            Object.assign(formSession, data.formSession);
+        }
         for (const key in data) {
             if (key.startsWith("fs_")) {
                 formSession[key] = data[key];
             }
         }
-        // Legacy fallback: some responses nest them under `edit_form_session`
         if (data.edit_form_session && typeof data.edit_form_session === "object") {
             Object.assign(formSession, data.edit_form_session);
         }
@@ -1577,8 +1643,18 @@ function renderEditInterface(messageBloc, messageId, jvcode, formSession, ajaxHa
 }
 
 async function submitEditedMessage(messageBloc, messageId, newText, formSession, ajaxHash) {
-    const topicId = getTopicId();
-    const forumId = getForumId();
+    const payload = getActivePayload();
+    // Approche payload (primaire) : topicId / forumId / ajax_hash issus du payload.
+    // Fallback (ancienne approche) : helpers DOM + hash liste_messages reçu en paramètre.
+    const canUsePayload = !!(payload && payload.ajaxToken
+        && payload.topicId !== undefined && payload.forumId !== undefined);
+
+    const topicId = canUsePayload ? payload.topicId : getTopicId();
+    const forumId = canUsePayload ? payload.forumId : getForumId();
+    const ajaxHashToUse = canUsePayload ? payload.ajaxToken : ajaxHash;
+    const aliasRang = document.getElementById('form_alias_rang');
+    const group = aliasRang?.value || "1";
+
     const originalContentDiv = messageBloc.querySelector(".jvchat-content");
     const editionDiv = messageBloc.querySelector(".jvchat-edition");
 
@@ -1587,7 +1663,7 @@ async function submitEditedMessage(messageBloc, messageId, newText, formSession,
     formData.append("messageId", messageId);
     formData.append("topicId", topicId);
     formData.append("forumId", forumId);
-    formData.append("group", "1");
+    formData.append("group", group);
 
     // Append every fs_* form-session token returned by the GET form-values call
     for (const key in formSession) {
@@ -1595,7 +1671,7 @@ async function submitEditedMessage(messageBloc, messageId, newText, formSession,
             formData.append(key, formSession[key]);
         }
     }
-    formData.append("ajax_hash", ajaxHash);
+    formData.append("ajax_hash", ajaxHashToUse);
     formData.append("resetFormAfterSuccess", "false");
 
     editionDiv.classList.add("jvchat-disabled-form");
@@ -1615,6 +1691,10 @@ async function submitEditedMessage(messageBloc, messageId, newText, formSession,
         editionDiv.classList.remove("jvchat-disabled-form");
 
         if (handleApiResponseError(data, "enregistrement de l'édition")) {
+            // Renouvellement du CRPS (form-session) si JVC en renvoie un nouveau
+            if (data && data.formSession && freshPayload) {
+                freshPayload.formSession = data.formSession;
+            }
             return;
         }
 
@@ -1761,6 +1841,7 @@ function getMessages(document) {
     let blocMessages = document.querySelectorAll(".messageUser.js-hybrid-component, .bloc-message-forum");
     let messages = [];
     for (let bloc of blocMessages) {
+        if (bloc.children.length === 0) continue; // Bloc blacklist sans DOM : évite un crash dans parseMessage
         messages.push(parseMessage(bloc));
     }
     return messages;
@@ -1774,6 +1855,7 @@ function findDeletedMessages(res, requestTimestamp) {
     let newDates = [];
 
     for (let bloc of blocMessages) {
+        if (bloc.children.length === 0) continue; // Bloc blacklist sans DOM
         let id;
         if (bloc.classList.contains("messageUser")) {
             id = parseInt(bloc.id.replace("message-", ""));
@@ -1942,104 +2024,152 @@ function parseDate(string) {
     return new Date(parseInt(year), monthIndex, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
 }
 
-function buildNestedQuoteLines(node, depth) {
-    // Sérialise un noeud DOM en lignes préfixées par "> " selon la profondeur,
-    // en gérant récursivement les <blockquote> imbriqués.
-    //
-    // Subtilité importante : JVC limite la profondeur d'imbrication réelle des
-    // <blockquote> dans le HTML rendu. Au-delà, il aplatit les citations plus
-    // profondes en texte brut avec des marqueurs "> " littéraux dans le texte.
-    // Cette fonction traite ces marqueurs comme des niveaux additionnels.
-    const prefix = "> ".repeat(depth);
-    const result = [];
-    let textBuffer = "";
-    let lastWasBlockquote = false;
-
-    const flushText = () => {
-        let text = textBuffer.replace(/^\n+|\n+$/g, "");
-        textBuffer = "";
-        if (text.length === 0) return;
-        if (lastWasBlockquote) {
-            // Ligne vide quotée pour séparer la blockquote imbriquée du texte suivant
-            result.push(prefix.replace(/\s+$/, ""));
-        }
-        // Heuristique : si le texte ne contient aucun saut de ligne mais
-        // plusieurs marqueurs "> " (citations aplaties par JVC sans <br>),
-        // on découpe sur ces marqueurs pour reconstituer les lignes.
-        if (!text.includes("\n") && /\s>+\s/.test(text)) {
-            text = text.replace(/\s+(>+\s)/g, "\n$1");
-        }
-        for (let line of text.split("\n")) {
-            // Compte les marqueurs "> " déjà présents dans la ligne (citations
-            // aplaties qui doivent ajouter à la profondeur courante).
-            let extra = 0;
-            const m = line.match(/^((?:>\s*)+)/);
-            if (m) {
-                extra = (m[1].match(/>/g) || []).length;
-                line = line.slice(m[0].length);
-            }
-            const linePrefix = "> ".repeat(depth + extra);
-            if (line.length === 0) {
-                result.push(linePrefix.replace(/\s+$/, ""));
-            } else {
-                result.push(linePrefix + line);
-            }
-        }
-        lastWasBlockquote = false;
-    };
-
-    const appendText = (str) => {
-        if (str) textBuffer += str;
-    };
-
-    for (const child of node.childNodes) {
-        if (child.nodeType === Node.TEXT_NODE) {
-            appendText(child.nodeValue);
-            continue;
-        }
-        if (child.nodeType !== Node.ELEMENT_NODE) continue;
-        if (child.classList && child.classList.contains("nested-quote-toggle-box")) {
-            continue;
-        }
-        if (child.tagName === "BLOCKQUOTE") {
-            flushText();
-            const nested = buildNestedQuoteLines(child, depth + 1);
-            result.push(...nested);
-            lastWasBlockquote = true;
-            continue;
-        }
-        if (child.tagName === "BR") {
-            appendText("\n");
-            continue;
-        }
-        // Pour les autres éléments (p, div, span, a, img, sticker...), on
-        // descend récursivement pour collecter leur texte tout en gérant
-        // d'éventuels <blockquote> ou <br> internes.
-        appendText(serializeInlineNode(child));
-    }
-    flushText();
-    return result;
-}
-
-function serializeInlineNode(node) {
-    // Sérialise un noeud "inline" en texte, en convertissant <br> en "\n" et
-    // en gérant les images sticker JVC (alt) et les liens.
-    if (node.nodeType === Node.TEXT_NODE) return node.nodeValue || "";
-    if (node.nodeType !== Node.ELEMENT_NODE) return "";
-    if (node.tagName === "BR") return "\n";
-    if (node.tagName === "IMG") {
-        // Stickers/smileys : on prend l'alt (ex: ":noel:") ou l'URL pour les
-        // stickers noelshack.
-        const alt = node.getAttribute("alt") || "";
-        return alt;
-    }
+function buildJvcodeFromNode(node, isRoot, isUnorderedList) {
+    // Convertit un noeud DOM rendu par JVC en JVCode éditable : restitue la mise
+    // en forme (gras, italique, souligné, barré), les listes, les spoils, le code,
+    // les vidéos youtube, les liens, les stickers et les citations imbriquées
+    // (chaque niveau de citation préfixe ses lignes avec "> ").
     let out = "";
-    for (const c of node.childNodes) out += serializeInlineNode(c);
-    // Pour les éléments de type bloc (p, div), on ajoute un saut de ligne final
-    // s'il n'y en a pas déjà, pour préserver la structure.
-    if ((node.tagName === "P" || node.tagName === "DIV") && out.length > 0 && !out.endsWith("\n")) {
-        out += "\n";
+    let previousWasParagraph = false;
+    let beginsWithSpoiler = false;
+
+    for (let child of node.childNodes) {
+        let name = child.nodeName;
+
+        switch (name) {
+            case "P": {
+                out += buildJvcodeFromNode(child) + "\n\n";
+                break;
+            }
+            case "STRONG": {
+                out += "'''" + buildJvcodeFromNode(child) + "'''";
+                break;
+            }
+            case "U": {
+                out += "<u>" + buildJvcodeFromNode(child) + "</u>";
+                break;
+            }
+            case "S": {
+                out += "<s>" + buildJvcodeFromNode(child) + "</s>";
+                break;
+            }
+            case "EM": {
+                out += "''" + buildJvcodeFromNode(child) + "''";
+                break;
+            }
+            case "BR": {
+                out += "\n";
+                break;
+            }
+            case "UL": {
+                out += buildJvcodeFromNode(child, false, true) + "\n\n";
+                break;
+            }
+            case "OL": {
+                out += buildJvcodeFromNode(child, false, false) + "\n\n";
+                break;
+            }
+            case "LI": {
+                out += (isUnorderedList === true ? "* " : "# ") + buildJvcodeFromNode(child) + "\n";
+                break;
+            }
+            case "DIV": {
+                let classList = child.classList;
+                if (classList.contains("message__spoil")) {
+                    if (out === "") {
+                        beginsWithSpoiler = true;
+                    }
+                    out += "<spoil>" + buildJvcodeFromNode(child) + "</spoil>\n\n";
+                } else if (classList.contains("message__spoilContent")) {
+                    out += buildJvcodeFromNode(child);
+                } else if (classList.contains("player-contenu")) {
+                    let iframe = child.getElementsByTagName("iframe")[0];
+                    if (iframe) {
+                        let match = iframe.src.match(/youtube\.com\/embed\/([A-Za-z0-9_-]+)/);
+                        if (match) {
+                            out += "[[youtube:" + match[1] + "]]\n\n";
+                        }
+                    }
+                }
+                break;
+            }
+            case "SPAN": {
+                let classList = child.classList;
+                if (classList.contains("message__spoil")) {
+                    out += "<spoil>" + buildJvcodeFromNode(child) + "</spoil>";
+                } else if (classList.contains("message__spoilContent")) {
+                    out += buildJvcodeFromNode(child);
+                }
+                break;
+            }
+            case "LABEL":
+            case "INPUT": {
+                break;
+            }
+            case "IMG": {
+                out += child.alt;
+                break;
+            }
+            case "A": {
+                // Conserve le texte si c'est un pseudo mis en avant (plugin Déboucled),
+                // sinon on garde l'URL brute du lien.
+                if (child.classList.contains("deboucled-highlighted")) {
+                    out += buildJvcodeFromNode(child);
+                } else if (child.href) {
+                    out += child.href;
+                } else {
+                    out += buildJvcodeFromNode(child);
+                }
+                break;
+            }
+            case "PRE": {
+                out += buildJvcodeFromNode(child) + "\n\n";
+                break;
+            }
+            case "CODE": {
+                out += "<code>" + child.textContent + "</code>";
+                break;
+            }
+            case "BLOCKQUOTE": {
+                let nested = buildJvcodeFromNode(child).replace(/^/gm, '> ');
+                if (previousWasParagraph) {
+                    out = out.trimEnd() + "\n" + nested + "\n\n";
+                } else {
+                    out += nested + "\n\n";
+                }
+                break;
+            }
+            case "#text": {
+                // Ignore le texte "vide" entourant la racine, mais conserve un
+                // éventuel texte significatif directement attaché à celle-ci.
+                if (!isRoot || child.textContent.trim() !== "") {
+                    out += child.textContent;
+                    if (isRoot && !out.endsWith("\n")) {
+                        out += "\n";
+                    }
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        previousWasParagraph = (name === "P");
     }
+
+    out = out.replace(/(\n){3,}/g, '\n\n');
+
+    if (beginsWithSpoiler && isRoot) {
+        out = "\n" + out.trimEnd();
+    } else {
+        out = out.trim();
+    }
+
+    if (isRoot) {
+        out = out.replace(/^/gm, '> ');
+    }
+
     return out;
 }
 
@@ -2058,16 +2188,12 @@ function buildQuoteEvent(messageId) {
             toggleTextarea();
         }
 
-        // Citation : on reconstruit le texte à partir du DOM JVChat en
-        // préservant l'imbrication des blockquotes (chaque niveau ajoute
-        // un "> ") et en récupérant les citations aplaties par JVC au-delà
-        // de sa profondeur d'imbrication maximale.
+        // Citation : on reconstruit le JVCode à partir du DOM JVChat via
+        // buildJvcodeFromNode (mise en forme, spoil, listes, citations imbriquées,
+        // youtube, liens, stickers...).
         const txtMsg = message.querySelector('.txt-msg');
-        const quoteLines = txtMsg ? buildNestedQuoteLines(txtMsg, 1) : [];
-        let content = `\n> Le ${date} '''${author}''' a écrit :\n`;
-        content += quoteLines.join('\n');
-        content = content.replace(/^[\r\n]+|[\r\n]+$/g, '');
-        content += '\n\n';
+        let quoted = txtMsg ? buildJvcodeFromNode(txtMsg, true) : "";
+        let content = `> Le ${date} '''${author}''' a écrit :\n${quoted}\n\n`;
 
         insertAtCursor(textarea, content);
         textarea.focus();
@@ -2208,9 +2334,12 @@ function submitSondageAnswer(event) {
         let reponseNum = parseInt(target.getAttribute("sondage-reponse-num"));
         let sondageId = sondageChoices[reponseNum]["sondageId"];
         let reponseId = sondageChoices[reponseNum]["responseId"];
-        let topicId = urlToFetch["ids"].split("-")[2];
 
-        let hash = surveyAjaxToken || freshHash;
+        const payload = getActivePayload();
+        // Approche payload (primaire) : topicId et ajax_hash issus du payload.
+        // Fallback (ancienne approche) : id extrait de l'URL + token global / freshHash.
+        let topicId = payload?.topicId ?? urlToFetch["ids"].split("-")[2];
+        let hash = payload?.survey?.ajaxToken || surveyAjaxToken || freshHash;
         let body = `ajax_hash=${encodeURIComponent(hash)}&id_topic=${encodeURIComponent(topicId)}&id_sondage=${encodeURIComponent(sondageId)}&id_sondage_reponse=${encodeURIComponent(reponseId)}`;
 
         fetch("https://www.jeuxvideo.com/forums/survey/vote", {
@@ -2737,14 +2866,13 @@ function getPayload(doc) {
     }
 
     if (rawPayloadString) {
-        try {
-            const decodedPayload = JSON.parse(atob(rawPayloadString));
-            return decodedPayload;
-        } catch (e) {
-            console.error("Erreur lors du décodage Base64 ou du parsing JSON du payload:", e);
+        const decodedPayload = decodeForumPayloadString(rawPayloadString);
+        if (decodedPayload === undefined) {
+            console.error("Erreur lors du décodage (gzip/base64) ou du parsing JSON du payload");
             console.error("Payload brut extrait", rawPayloadString); // Pour le débogage
             return null;
         }
+        return decodedPayload;
     } else {
         console.warn("La variable window.jvc.forumsAppPayload n'a pas été trouvée dans les balises <script> du DOM fourni.");
         return null;

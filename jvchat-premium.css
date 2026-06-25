@@ -453,10 +453,22 @@ label {
   width: 100%;
 }
 
+#bloc-formulaire-forum > form:not([class]),
+#bloc-formulaire-forum > form.messageEditForm,
 #forums-post-message-editor > form:not([class]),
 #forums-post-message-editor > form.messageEditForm {
   display: flex;
   align-items: center;
+}
+
+#bloc-formulaire-forum > form > .messageEditor__containerEdit {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+#bloc-formulaire-forum > form > .messageEditForm__buttons {
+  flex: 0 0 auto;
 }
 
 .simpleButton.postMessage {

@@ -19,6 +19,7 @@ const userscriptGlobals = {
   unsafeWindow: "readonly",
   Tampermonkey: "readonly",
   Violentmonkey: "readonly",
+  fflate: "readonly",
 };
 
 export default defineConfig([
