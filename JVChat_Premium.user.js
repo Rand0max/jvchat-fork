@@ -4,7 +4,7 @@
 // @author       Blaff & Rand0max
 // @namespace    JVChatPremium
 // @license      MIT
-// @version      0.2.8
+// @version      0.2.9
 // @match        http://*.jeuxvideo.com/forums/42-*
 // @match        https://*.jeuxvideo.com/forums/42-*
 // @match        http://*.jeuxvideo.com/forums/1-*
@@ -713,7 +713,11 @@ function detectMosaic(elem) {
     let regex1 = /^.+\/(?:[0-9]+-)+[0-9]{1,2}-([a-z0-9]+)\.\w+$/i;
     let regex2 = /^.+\/(?:[0-9]+-)+row-[0-9]+-col-[0-9](?:-[0-9]+)?\.\w+$/i;
     for (let image of imagesShack) {
-        let match1 = image.src.match(regex1);
+        let src = image.src || image.getAttribute("data-src") || image.getAttribute("data-src-mini");
+        if (!src) {
+            continue;
+        }
+        let match1 = src.match(regex1);
         if (match1) {
             let [_, identifier] = match1;
             if (Object.prototype.hasOwnProperty.call(mosaics, identifier)) {
@@ -723,7 +727,7 @@ function detectMosaic(elem) {
             }
             continue;
         }
-        let match2 = image.src.match(regex2);
+        let match2 = src.match(regex2);
         if (match2) {
             if (Object.prototype.hasOwnProperty.call(mosaics, "@rowcol")) {
                 mosaics["@rowcol"].push(image);

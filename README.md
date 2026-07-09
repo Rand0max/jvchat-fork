@@ -14,9 +14,12 @@
 
 ### Mainteneur : **Rand0max**
 
-### Dernière version : **0.2.8 - 25/06/2026**
+### Dernière version : **0.2.9 - 09/07/2026**
 
 ## Changelog
+
+### 0.2.9 — 09/07/2026
+- Correction d'un crash lors de la détection des mosaïques d'images
 
 ### 0.2.8 — 25/06/2026
 - Support du nouveau payload JVC
